@@ -2,6 +2,8 @@
 // Depends on: game state, drawing utils, drawCat, drawHomeBg, sfx, initCatAI
 
 function drawSelect() {
+  setBgMusicTheme('select');
+  if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   drawHomeBg();
 
   ctx.fillStyle = '#6a4';

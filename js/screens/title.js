@@ -6,6 +6,8 @@ function updateTitle(dt) {
 }
 
 function drawTitle() {
+  setBgMusicTheme('title');
+  if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   // Background gradient
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#2d1b69');

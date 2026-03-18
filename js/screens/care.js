@@ -2,7 +2,7 @@
 // Depends on: catai.js, furniture.js, game state, drawing utils, sfx
 
 function updateCare(dt) {
-  // Start background music when entering care screen
+  setBgMusicTheme('care');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
 
   if (game.careAnim) {

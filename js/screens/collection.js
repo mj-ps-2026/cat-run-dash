@@ -2,6 +2,8 @@
 // Depends on: game state, drawing utils, drawCat, sfx
 
 function drawCollection() {
+  setBgMusicTheme('collection');
+  if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#2d1b69');
   grad.addColorStop(1, '#1a1a4e');

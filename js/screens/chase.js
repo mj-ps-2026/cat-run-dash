@@ -187,6 +187,8 @@ function updateChase(dt) {
 }
 
 function drawChase() {
+  setBgMusicTheme('chase');
+  if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   const c = game.chase;
   const camY = c.cameraY;
 

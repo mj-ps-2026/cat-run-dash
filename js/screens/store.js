@@ -2,6 +2,8 @@
 // Depends on: game state, drawing utils, drawCat, buyItem, sfx
 
 function drawStore() {
+  setBgMusicTheme('store');
+  if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   // Shop interior background
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#f8e8d0');

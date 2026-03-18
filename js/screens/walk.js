@@ -266,6 +266,8 @@ function updateWalk(dt) {
 }
 
 function drawWalk() {
+  setBgMusicTheme('walk');
+  if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   const w = game.walk;
 
   // Companion selection overlay
