@@ -1,0 +1,8 @@
+/* ============================================================
+   CAT RUN DASH - Styles
+   Extracted from index.html
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+canvas { border-radius: 12px; cursor: pointer; image-rendering: auto; max-width: 100vw; max-height: 100vh; }
