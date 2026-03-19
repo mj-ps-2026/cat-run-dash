@@ -41,28 +41,19 @@ const BG_NOTES = {
   C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.00, A4: 440.00, C5: 523.25,
 };
 
-// Each theme: bpm, 32-beat phrase (repeated with variation = 64-beat loop). '—' = null.
-// Build 64-beat pattern: phrase + phrase with last bar different for variety.
+function normalize(arr) { return arr.map(n => n === '—' ? null : n); }
+
 function expand32to64(mel32, bass32) {
-  const mel = mel32.slice();
-  const bass = bass32.slice();
-  for (let i = 0; i < 8; i++) {
-    mel.push(mel[i] === '—' ? null : mel[i]);
-    bass.push(bass[i] === '—' ? null : bass[i]);
-  }
-  for (let i = 8; i < 16; i++) {
-    mel.push(mel[i]);
-    bass.push(bass[i]);
-  }
-  for (let i = 16; i < 24; i++) {
-    mel.push(mel[i] === '—' ? null : mel[i]);
-    bass.push(bass[i] === '—' ? null : bass[i]);
-  }
+  const m = normalize(mel32);
+  const b = normalize(bass32);
+  const mel = m.slice();
+  const bass = b.slice();
+  for (let i = 0; i < 24; i++) { mel.push(m[i]); bass.push(b[i]); }
   for (let i = 24; i < 32; i++) {
-    mel.push(i === 28 ? (mel[i] === 'G4' ? 'A4' : mel[i]) : mel[i]);
-    bass.push(bass[i]);
+    mel.push(i === 28 ? (m[i] === 'G4' ? 'A4' : m[i]) : m[i]);
+    bass.push(b[i]);
   }
-  return { mel: mel.map(n => n === '—' ? null : n), bass: bass.map(n => n === '—' ? null : n) };
+  return { mel, bass };
 }
 
 const BG_THEMES = (() => {
@@ -115,11 +106,12 @@ function playMusicNote(freq, dur, vol, type) {
 
 function setBgMusicTheme(screen) {
   const s = screen || game.screen;
-  if (!BG_THEMES[s]) return;
+  if (!BG_THEMES[s] || bgMusic.theme === s) return;
   bgMusic.theme = s;
+  bgMusic.beat = 0;
   if (bgMusic.playing && bgMusic.interval) {
     clearInterval(bgMusic.interval);
-    const th = BG_THEMES[bgMusic.theme];
+    const th = BG_THEMES[s];
     bgMusic.interval = setInterval(runBgMusicBeat, th.msPerBeat);
   }
 }
@@ -127,11 +119,12 @@ function setBgMusicTheme(screen) {
 function runBgMusicBeat() {
   if (!bgMusic.enabled) return;
   const th = BG_THEMES[bgMusic.theme] || BG_THEMES.care;
+  const beatSec = th.msPerBeat / 1000;
   const b = bgMusic.beat % th.mel.length;
   const mel = th.mel[b];
-  if (mel) playMusicNote(BG_NOTES[mel], th.msPerBeat * 0.0012, 0.042, 'sine');
+  if (mel) playMusicNote(BG_NOTES[mel], beatSec * 0.9, 0.042, 'sine');
   const bass = th.bass[b];
-  if (bass) playMusicNote(BG_NOTES[bass], th.msPerBeat * 0.002, 0.028, 'triangle');
+  if (bass) playMusicNote(BG_NOTES[bass], beatSec * 1.6, 0.028, 'triangle');
   bgMusic.beat++;
 }
 

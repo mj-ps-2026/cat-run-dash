@@ -468,7 +468,8 @@ function drawWalk() {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Arrow keys / WASD to move  |  Collect sparkly items!', W / 2, H - 10);
+    const moveHint = touchCtrl.isTouch ? 'Use joystick to move' : 'Arrow keys / WASD to move';
+    ctx.fillText(`${moveHint}  |  Collect sparkly items!`, W / 2, H - 10);
   }
 
   // Return button (not during caught animation)
@@ -481,5 +482,6 @@ function drawWalk() {
     }
   }
 
+  drawTouchControls();
   drawFloats();
 }

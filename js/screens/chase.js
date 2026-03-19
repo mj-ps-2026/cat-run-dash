@@ -322,7 +322,7 @@ function drawChase() {
   ctx.fill();
   ctx.fillStyle = '#aaa';
   ctx.font = '10px sans-serif';
-  ctx.fillText('DASH [Space]', 22, 49);
+  ctx.fillText(touchCtrl.isTouch ? 'DASH' : 'DASH [Space]', 22, 49);
 
   // Mini-map
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -360,8 +360,10 @@ function drawChase() {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('WASD/Arrows to move  |  Space to Dash', W / 2, H - 8);
+  const chaseHint = touchCtrl.isTouch ? 'Joystick to move  |  Tap DASH button' : 'WASD/Arrows to move  |  Space to Dash';
+  ctx.fillText(chaseHint, W / 2, H - 8);
 
+  drawTouchControls();
   drawFloats();
 
   // Win/Lose overlay
