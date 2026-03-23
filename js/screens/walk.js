@@ -1,6 +1,10 @@
 // screens/walk.js — Walk/gather screen (init, update, draw)
 // Depends on: maze.js, game state, drawing utils, drawCat, drawDog, sfx
 
+const WALK_SCRATCH_BTN_X = 10, WALK_SCRATCH_BTN_Y = H - 50, WALK_SCRATCH_BTN_W = 120, WALK_SCRATCH_BTN_H = 44;
+const WALK_SCRATCH_RANGE = 74;
+const WALK_SCRATCH_COOLDOWN = 1.45;
+
 function initWalk() {
   const w = game.walk;
   w.distWalked = 0;
@@ -73,6 +77,8 @@ function initWalk() {
   w.targetX = w.px;
   w.targetY = w.py;
   w.autoWalkTimer = 0;
+  w.scratchCooldown = 0;
+  w.scratchFlash = 0;
 
   // Scatter collectible items
   w.items = [];
@@ -128,8 +134,12 @@ function updateWalk(dt) {
   const speed = 150 * moodBonus;
   const catRad = 10;
 
-  // Click/tap to set movement target
-  if (mouse.clicked && !hitBox(mouse.x, mouse.y, W - 130, 10, 120, 35)) {
+  w.scratchCooldown = Math.max(0, w.scratchCooldown - dt);
+  if (w.scratchFlash > 0) w.scratchFlash -= dt;
+
+  // Click/tap to set movement target (not Go Home or Scratch)
+  const scratchBtnHit = w.dogs.length > 0 && hitBox(mouse.x, mouse.y, WALK_SCRATCH_BTN_X, WALK_SCRATCH_BTN_Y, WALK_SCRATCH_BTN_W, WALK_SCRATCH_BTN_H);
+  if (mouse.clicked && !hitBox(mouse.x, mouse.y, W - 130, 10, 120, 35) && !scratchBtnHit) {
     w.targetX = mouse.x;
     w.targetY = mouse.y;
   }
@@ -173,8 +183,38 @@ function updateWalk(dt) {
   w.px = Math.max(15, Math.min(W - 15, w.px));
   w.py = Math.max(55, Math.min(H - 15, w.py));
 
+  // Defensive scratch — stun nearby dogs
+  const scratchKeys = keys['KeyF'] || keys['KeyE'];
+  const scratchClick = mouse.clicked && scratchBtnHit;
+  if (!w.caught && w.scratchCooldown <= 0 && w.dogs.length > 0 && (scratchKeys || scratchClick)) {
+    const partArr = game.chase.particles.length ? game.chase.particles : (w._particles || (w._particles = []));
+    let hitAny = false;
+    w.dogs.forEach(dog => {
+      const d = Math.hypot(dog.x - w.px, dog.y - w.py);
+      if (d < WALK_SCRATCH_RANGE) {
+        hitAny = true;
+        dog.stunTimer = 2.6;
+        const nx = d < 1e-3 ? 1 : (dog.x - w.px) / d;
+        const ny = d < 1e-3 ? 0 : (dog.y - w.py) / d;
+        dog.x += nx * 38;
+        dog.y += ny * 38;
+        spawnParticles(partArr, dog.x, dog.y, 8, '#ffcc44', 55);
+      }
+    });
+    w.scratchCooldown = WALK_SCRATCH_COOLDOWN;
+    w.scratchFlash = 0.28;
+    sfxScrape();
+    addFloat(w.px, w.py - 42, hitAny ? '💅 Scratch!' : '💅 Swipe!', hitAny ? '#fa0' : '#88a');
+  }
+
   // Dog AI and movement
   w.dogs.forEach(dog => {
+    if ((dog.stunTimer || 0) > 0) {
+      dog.stunTimer -= dt;
+      if (dog.stunTimer > 0) return;
+      dog.stunTimer = 0;
+    }
+
     dog.changeTimer -= dt;
     if (dog.changeTimer <= 0) {
       dog.changeTimer = 1.5 + Math.random() * 2;
@@ -460,6 +500,16 @@ function drawWalk() {
     drawCat(w.px, w.py, game.currentCat, game.currentStage, facing, game.time, moving);
   }
 
+  if (w.scratchFlash > 0 && !w.caught) {
+    ctx.globalAlpha = 0.35 + Math.sin(game.time * 40) * 0.15;
+    ctx.strokeStyle = '#ffcc44';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(w.px, w.py, 28 + (0.28 - w.scratchFlash) * 40, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
   // HUD
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   drawRoundRect(10, 10, 260, 40, 8);
@@ -489,12 +539,19 @@ function drawWalk() {
     ctx.fillText(`${diffLabels[game.currentStage]}  |  🐕 ${w.dogs.length} dog${w.dogs.length !== 1 ? 's' : ''}`, W / 2, 25);
   }
 
+  // Scratch button (when dogs are present)
+  if (w.dogs.length > 0 && !w.caught) {
+    const ready = w.scratchCooldown <= 0;
+    const lbl = ready ? '😼 Scratch' : `${w.scratchCooldown.toFixed(1)}s`;
+    drawButton(WALK_SCRATCH_BTN_X, WALK_SCRATCH_BTN_Y, WALK_SCRATCH_BTN_W, WALK_SCRATCH_BTN_H, lbl, ready ? '#e17055' : '#95a5a6', ready);
+  }
+
   // Warning about dogs
   if (w.dogs.length > 0 && !w.caught) {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Watch out for dogs! If caught, your paw meter resets!', W / 2, H - 10);
+    ctx.fillText('Watch out for dogs! Scratch (F) to push them back. If caught, paw meter resets!', W / 2, H - 10);
   } else if (!w.caught) {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.font = '11px sans-serif';

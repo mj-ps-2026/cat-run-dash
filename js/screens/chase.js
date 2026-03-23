@@ -1,6 +1,14 @@
 // screens/chase.js — Chase screen (init, update, draw) + house drawing helpers
 // Depends on: game state, drawing utils, drawCat, drawDog, particles, sfx
 
+const CHASE_SCRATCH_CX = 600, CHASE_SCRATCH_CY = 500, CHASE_SCRATCH_HIT_R = 50;
+const CHASE_SCRATCH_RANGE = 78;
+const CHASE_SCRATCH_COOLDOWN = 1.45;
+
+function chaseScratchHit(mx, my) {
+  return Math.hypot(mx - CHASE_SCRATCH_CX, my - CHASE_SCRATCH_CY) < CHASE_SCRATCH_HIT_R;
+}
+
 function initChase() {
   const c = game.chase;
   c.mapH = 3000; // Map height
@@ -19,6 +27,8 @@ function initChase() {
   c.particles = [];
   c.houseY = 120;
   c.targetX = c.px;
+  c.scratchCooldown = 0;
+  c.scratchFlash = 0;
 
   // Place dogs
   c.dogs = [];
@@ -79,10 +89,10 @@ function updateChase(dt) {
   if (keys['ArrowLeft'] || keys['KeyA']) hDx -= 1;
   if (keys['ArrowRight'] || keys['KeyD']) hDx += 1;
 
-  // Click/tap sets horizontal target
+  // Click/tap sets horizontal target (not on Scratch button)
   if (c.targetX === undefined) c.targetX = c.px;
   if (mouse.clicked || (mouse.down && touchCtrl.isTouch)) {
-    c.targetX = mouse.x;
+    if (!chaseScratchHit(mouse.x, mouse.y)) c.targetX = mouse.x;
   }
 
   // Slide toward target X (when no keyboard input)
@@ -127,6 +137,37 @@ function updateChase(dt) {
     }
   }
   if (c.invincible > 0) c.invincible -= dt;
+
+  c.scratchCooldown = Math.max(0, c.scratchCooldown - dt);
+  if (c.scratchFlash > 0) c.scratchFlash -= dt;
+
+  // Defensive scratch — stun and push nearby dogs (separate from dash)
+  const scratchChaseKeys = keys['KeyF'] || keys['KeyE'];
+  const scratchChaseClick = mouse.clicked && chaseScratchHit(mouse.x, mouse.y);
+  if (c.scratchCooldown <= 0 && (scratchChaseKeys || scratchChaseClick)) {
+    let hitAny = false;
+    c.dogs.forEach(dog => {
+      if (!dog.alive) return;
+      const distToPlayer = Math.hypot(dog.x - c.px, dog.y - c.py);
+      if (distToPlayer < CHASE_SCRATCH_RANGE) {
+        hitAny = true;
+        dog.stunTimer = 2.6;
+        const nx = distToPlayer < 1e-3 ? 1 : (dog.x - c.px) / distToPlayer;
+        const ny = distToPlayer < 1e-3 ? 0 : (dog.y - c.py) / distToPlayer;
+        dog.x += nx * 55;
+        dog.y += ny * 55;
+        dog.vx = 0;
+        dog.vy = 0;
+        spawnParticles(c.particles, dog.x, dog.y, 10, '#ff8844', 70);
+      }
+    });
+    c.scratchCooldown = CHASE_SCRATCH_COOLDOWN;
+    c.scratchFlash = 0.28;
+    c.invincible = Math.max(c.invincible, 0.35);
+    sfxScrape();
+    const sy = c.py - c.cameraY;
+    addFloat(c.px, sy - 40, hitAny ? '💅 Scratch!' : '💅 Swipe!', hitAny ? '#fa0' : '#88a');
+  }
 
   // Dogs AI
   c.dogs.forEach(dog => {
@@ -308,6 +349,16 @@ function drawChase() {
   drawCat(c.px, playerScreenY, game.currentCat, 3, pFacing, game.time, moving);
   ctx.globalAlpha = 1;
 
+  if (c.scratchFlash > 0) {
+    ctx.globalAlpha = 0.35 + Math.sin(game.time * 40) * 0.15;
+    ctx.strokeStyle = '#e17055';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(c.px, playerScreenY, 32 + (0.28 - c.scratchFlash) * 45, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
   // Particles
   drawParticles(c.particles, 0, camY);
 
@@ -342,6 +393,25 @@ function drawChase() {
   ctx.fillStyle = '#aaa';
   ctx.font = '10px sans-serif';
   ctx.fillText(touchCtrl.isTouch ? 'DASH' : 'DASH [Space]', 22, 49);
+
+  // Scratch button (circle — matches touch zone in input.js)
+  const scReady = c.scratchCooldown <= 0;
+  ctx.globalAlpha = scReady ? 0.38 : 0.14;
+  ctx.fillStyle = scReady ? '#e17055' : '#666';
+  ctx.beginPath();
+  ctx.arc(CHASE_SCRATCH_CX, CHASE_SCRATCH_CY, 42, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.globalAlpha = scReady ? 0.92 : 0.45;
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('😼', CHASE_SCRATCH_CX, CHASE_SCRATCH_CY - 4);
+  ctx.font = 'bold 11px sans-serif';
+  ctx.fillText(scReady ? 'SCRATCH' : `${c.scratchCooldown.toFixed(1)}s`, CHASE_SCRATCH_CX, CHASE_SCRATCH_CY + 14);
+  ctx.globalAlpha = 1;
 
   // Mini-map
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -379,7 +449,7 @@ function drawChase() {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  const chaseHint = touchCtrl.isTouch ? 'Tap to steer  |  Tap DASH button' : 'Tap or Arrows to steer  |  Space to Dash';
+  const chaseHint = touchCtrl.isTouch ? 'Steer  |  SCRATCH  |  DASH' : 'Steer  |  F Scratch  |  Space Dash';
   ctx.fillText(chaseHint, W / 2, H - 8);
 
   drawTouchControls();

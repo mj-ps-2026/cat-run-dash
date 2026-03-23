@@ -14,9 +14,9 @@ let game = {
   // Care animation
   careAnim: null, // { type, timer, x, y }
   // Walk state
-  walk: { px: 0, py: 0, items: [], distWalked: 0, gathered: 0, walkCounted: false, maze: [], dogs: [], caught: false, caughtTimer: 0, mazeW: 0, mazeH: 0, cellSize: 0, hits: 0, companion: null, companionX: 0, companionY: 0, choosingCompanion: false },
+  walk: { px: 0, py: 0, items: [], distWalked: 0, gathered: 0, walkCounted: false, maze: [], dogs: [], caught: false, caughtTimer: 0, mazeW: 0, mazeH: 0, cellSize: 0, hits: 0, companion: null, companionX: 0, companionY: 0, choosingCompanion: false, scratchCooldown: 0, scratchFlash: 0 },
   // Chase state
-  chase: { px: 0, py: 0, vx: 0, vy: 0, dogs: [], scrapes: 0, timer: 300, dashCooldown: 0, dashing: false, dashTimer: 0, houseY: 0, mapH: 0, cameraY: 0, obstacles: [], particles: [], won: false, lost: false, invincible: 0 },
+  chase: { px: 0, py: 0, vx: 0, vy: 0, dogs: [], scrapes: 0, timer: 300, dashCooldown: 0, dashing: false, dashTimer: 0, houseY: 0, mapH: 0, cameraY: 0, obstacles: [], particles: [], won: false, lost: false, invincible: 0, scratchCooldown: 0, scratchFlash: 0 },
   // Transition
   transition: null, // { from, to, timer }
   // Floating text

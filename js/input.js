@@ -14,6 +14,8 @@ const touchCtrl = {
   joyActive: false,
   dashId: null,
   dashActive: false,
+  walkScratchId: null,
+  chaseScratchId: null,
   uiId: null,
   uiStartX: 0, uiStartY: 0,
   uiMoved: false,
@@ -23,6 +25,8 @@ const touchCtrl = {
 const JOY_BASE_X = 110, JOY_BASE_Y = 500;
 const JOY_RADIUS = 55, JOY_MAX = 50, JOY_DEAD = 8, JOY_THRESH = 0.3;
 const DASH_BTN_X = 710, DASH_BTN_Y = 500, DASH_BTN_R = 45;
+const WALK_SCRATCH_TOUCH_X = 10, WALK_SCRATCH_TOUCH_Y = H - 50, WALK_SCRATCH_TOUCH_W = 120, WALK_SCRATCH_TOUCH_H = 44;
+const CHASE_SCRATCH_TOUCH_X = 600, CHASE_SCRATCH_TOUCH_Y = 500, CHASE_SCRATCH_TOUCH_R = 48;
 
 // --- Keyboard ---
 document.addEventListener('keydown', e => { keys[e.code] = true; });
@@ -59,6 +63,14 @@ function wantsDashButton() {
   return game.screen === 'chase' && !game.chase.won && !game.chase.lost;
 }
 
+function wantsWalkScratchButton() {
+  return game.screen === 'walk' && !game.walk.caught && !game.walk.choosingCompanion && game.walk.dogs.length > 0;
+}
+
+function wantsChaseScratchButton() {
+  return game.screen === 'chase' && !game.chase.won && !game.chase.lost;
+}
+
 // --- Multi-touch ---
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
@@ -67,6 +79,22 @@ canvas.addEventListener('touchstart', e => {
 
   for (const t of e.changedTouches) {
     const p = touchToCanvas(t, rect);
+
+    // Walk: Scratch button (hold F)
+    if (wantsWalkScratchButton() && touchCtrl.walkScratchId === null &&
+        hitBox(p.x, p.y, WALK_SCRATCH_TOUCH_X, WALK_SCRATCH_TOUCH_Y, WALK_SCRATCH_TOUCH_W, WALK_SCRATCH_TOUCH_H)) {
+      touchCtrl.walkScratchId = t.identifier;
+      keys['KeyF'] = true;
+      continue;
+    }
+
+    // Chase: Scratch button (hold F)
+    if (wantsChaseScratchButton() && touchCtrl.chaseScratchId === null &&
+        Math.hypot(p.x - CHASE_SCRATCH_TOUCH_X, p.y - CHASE_SCRATCH_TOUCH_Y) < CHASE_SCRATCH_TOUCH_R + 18) {
+      touchCtrl.chaseScratchId = t.identifier;
+      keys['KeyF'] = true;
+      continue;
+    }
 
     // Dash button zone (chase only)
     if (wantsDashButton() && touchCtrl.dashId === null &&
@@ -118,6 +146,16 @@ function handleTouchEnd(e) {
       touchCtrl.dashId = null;
       touchCtrl.dashActive = false;
       keys['Space'] = false;
+      continue;
+    }
+    if (t.identifier === touchCtrl.walkScratchId) {
+      touchCtrl.walkScratchId = null;
+      keys['KeyF'] = false;
+      continue;
+    }
+    if (t.identifier === touchCtrl.chaseScratchId) {
+      touchCtrl.chaseScratchId = null;
+      keys['KeyF'] = false;
       continue;
     }
     // UI release — register click (for buttons/walk/chase steering)
