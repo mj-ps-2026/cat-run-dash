@@ -52,9 +52,11 @@ function touchToCanvas(t, rect) {
 }
 
 function wantsJoystick() {
-  if (game.screen === 'chase' && !game.chase.won && !game.chase.lost) return true;
-  if (game.screen === 'walk' && !game.walk.choosingCompanion && !game.walk.caught) return true;
   return false;
+}
+
+function wantsDashButton() {
+  return game.screen === 'chase' && !game.chase.won && !game.chase.lost;
 }
 
 // --- Multi-touch ---
@@ -65,21 +67,9 @@ canvas.addEventListener('touchstart', e => {
 
   for (const t of e.changedTouches) {
     const p = touchToCanvas(t, rect);
-    const joy = wantsJoystick();
-
-    // Joystick zone: left 35%, bottom 45%
-    if (joy && touchCtrl.joyId === null && p.x < W * 0.35 && p.y > H * 0.55) {
-      touchCtrl.joyId = t.identifier;
-      touchCtrl.joyActive = true;
-      touchCtrl.joyCX = p.x;
-      touchCtrl.joyCY = p.y;
-      touchCtrl.joyDX = 0;
-      touchCtrl.joyDY = 0;
-      continue;
-    }
 
     // Dash button zone (chase only)
-    if (joy && game.screen === 'chase' && touchCtrl.dashId === null &&
+    if (wantsDashButton() && touchCtrl.dashId === null &&
         Math.hypot(p.x - DASH_BTN_X, p.y - DASH_BTN_Y) < DASH_BTN_R + 20) {
       touchCtrl.dashId = t.identifier;
       touchCtrl.dashActive = true;
@@ -87,7 +77,7 @@ canvas.addEventListener('touchstart', e => {
       continue;
     }
 
-    // UI touch
+    // UI touch (also used for click-to-move steering)
     mouse.x = p.x;
     mouse.y = p.y;
     mouse.down = true;
@@ -106,27 +96,7 @@ canvas.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
     const p = touchToCanvas(t, rect);
 
-    // Joystick
-    if (t.identifier === touchCtrl.joyId) {
-      const dx = p.x - touchCtrl.joyCX;
-      const dy = p.y - touchCtrl.joyCY;
-      const dist = Math.hypot(dx, dy);
-      if (dist > JOY_DEAD) {
-        const clamped = Math.min(dist, JOY_MAX);
-        touchCtrl.joyDX = (dx / dist) * (clamped / JOY_MAX);
-        touchCtrl.joyDY = (dy / dist) * (clamped / JOY_MAX);
-      } else {
-        touchCtrl.joyDX = 0;
-        touchCtrl.joyDY = 0;
-      }
-      keys['ArrowLeft']  = touchCtrl.joyDX < -JOY_THRESH;
-      keys['ArrowRight'] = touchCtrl.joyDX >  JOY_THRESH;
-      keys['ArrowUp']    = touchCtrl.joyDY < -JOY_THRESH;
-      keys['ArrowDown']  = touchCtrl.joyDY >  JOY_THRESH;
-      continue;
-    }
-
-    // UI touch
+    // UI touch (handles steering + store scroll)
     if (t.identifier === touchCtrl.uiId) {
       mouse.x = p.x;
       mouse.y = p.y;
@@ -143,18 +113,6 @@ canvas.addEventListener('touchmove', e => {
 function handleTouchEnd(e) {
   e.preventDefault();
   for (const t of e.changedTouches) {
-    // Joystick release
-    if (t.identifier === touchCtrl.joyId) {
-      touchCtrl.joyId = null;
-      touchCtrl.joyActive = false;
-      touchCtrl.joyDX = 0;
-      touchCtrl.joyDY = 0;
-      keys['ArrowLeft'] = false;
-      keys['ArrowRight'] = false;
-      keys['ArrowUp'] = false;
-      keys['ArrowDown'] = false;
-      continue;
-    }
     // Dash release
     if (t.identifier === touchCtrl.dashId) {
       touchCtrl.dashId = null;
@@ -162,15 +120,14 @@ function handleTouchEnd(e) {
       keys['Space'] = false;
       continue;
     }
-    // UI release — only register click if finger didn't drag
+    // UI release — register click (for buttons/walk/chase steering)
     if (t.identifier === touchCtrl.uiId) {
       const rect = canvas.getBoundingClientRect();
       const p = touchToCanvas(t, rect);
-      if (!touchCtrl.uiMoved) {
-        mouse.x = p.x;
-        mouse.y = p.y;
-        mouse.clicked = true;
-      }
+      mouse.x = p.x;
+      mouse.y = p.y;
+      // Always register click on release (steering screens handle drag natively)
+      mouse.clicked = true;
       mouse.down = false;
       touchCtrl.uiId = null;
     }
@@ -187,36 +144,12 @@ canvas.addEventListener('wheel', e => {
   }
 }, { passive: false });
 
-// --- Virtual controls drawing (called from walk/chase draw) ---
+// --- Virtual controls drawing (called from chase draw) ---
 function drawTouchControls() {
-  if (!touchCtrl.isTouch || !wantsJoystick()) return;
-
-  // Joystick base
-  const jx = touchCtrl.joyActive ? touchCtrl.joyCX : JOY_BASE_X;
-  const jy = touchCtrl.joyActive ? touchCtrl.joyCY : JOY_BASE_Y;
-
-  ctx.globalAlpha = 0.2;
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(jx, jy, JOY_RADIUS, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.35;
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Joystick thumb
-  const tx = jx + touchCtrl.joyDX * (JOY_RADIUS - 15);
-  const ty = jy + touchCtrl.joyDY * (JOY_RADIUS - 15);
-  ctx.globalAlpha = 0.45;
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(tx, ty, 20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
+  if (!touchCtrl.isTouch) return;
 
   // Dash button (chase only)
-  if (game.screen === 'chase') {
+  if (wantsDashButton()) {
     const ready = game.chase.dashCooldown <= 0;
     ctx.globalAlpha = ready ? 0.35 : 0.12;
     ctx.fillStyle = ready ? '#ffcc44' : '#666';

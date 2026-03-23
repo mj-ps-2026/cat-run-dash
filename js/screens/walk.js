@@ -70,6 +70,10 @@ function initWalk() {
     w.dogs = [];
   }
 
+  w.targetX = w.px;
+  w.targetY = w.py;
+  w.autoWalkTimer = 0;
+
   // Scatter collectible items
   w.items = [];
   const itemCount = stage === 0 ? 12 : (w.mazeW * w.mazeH > 20 ? 10 : 8);
@@ -120,19 +124,44 @@ function updateWalk(dt) {
     return;
   }
 
-  const speed = 150;
+  const moodBonus = 1.0 + getPawMood() * 0.3;
+  const speed = 150 * moodBonus;
   const catRad = 10;
-  let dx = 0, dy = 0;
-  if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
-  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
-  if (keys['ArrowUp'] || keys['KeyW']) dy -= 1;
-  if (keys['ArrowDown'] || keys['KeyS']) dy += 1;
-  if (dx || dy) {
-    const mag = Math.sqrt(dx * dx + dy * dy);
-    dx /= mag; dy /= mag;
-    w.px += dx * speed * dt;
-    w.py += dy * speed * dt;
+
+  // Click/tap to set movement target
+  if (mouse.clicked && !hitBox(mouse.x, mouse.y, W - 130, 10, 120, 35)) {
+    w.targetX = mouse.x;
+    w.targetY = mouse.y;
+  }
+  // Continuous touch drag also updates target
+  if (mouse.down && touchCtrl.isTouch && touchCtrl.uiId !== null) {
+    w.targetX = mouse.x;
+    w.targetY = mouse.y;
+  }
+
+  // Keyboard overrides target
+  let kbDx = 0, kbDy = 0;
+  if (keys['ArrowLeft'] || keys['KeyA']) kbDx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) kbDx += 1;
+  if (keys['ArrowUp'] || keys['KeyW']) kbDy -= 1;
+  if (keys['ArrowDown'] || keys['KeyS']) kbDy += 1;
+  if (kbDx || kbDy) {
+    const mag = Math.sqrt(kbDx * kbDx + kbDy * kbDy);
+    w.px += (kbDx / mag) * speed * dt;
+    w.py += (kbDy / mag) * speed * dt;
     w.distWalked += speed * dt;
+    w.targetX = w.px;
+    w.targetY = w.py;
+  } else {
+    // Move toward click/tap target
+    const tdx = w.targetX - w.px;
+    const tdy = w.targetY - w.py;
+    const tdist = Math.hypot(tdx, tdy);
+    if (tdist > 5) {
+      w.px += (tdx / tdist) * speed * dt;
+      w.py += (tdy / tdist) * speed * dt;
+      w.distWalked += speed * dt;
+    }
   }
 
   // Wall collisions for cat
@@ -409,8 +438,10 @@ function drawWalk() {
   }
 
   // Draw player cat
-  const moving = keys['ArrowLeft'] || keys['ArrowRight'] || keys['ArrowUp'] || keys['ArrowDown'] || keys['KeyA'] || keys['KeyD'] || keys['KeyW'] || keys['KeyS'];
-  const facing = keys['ArrowLeft'] || keys['KeyA'] ? -1 : 1;
+  const toTarget = Math.hypot(w.targetX - w.px, w.targetY - w.py);
+  const kbMoving = keys['ArrowLeft'] || keys['ArrowRight'] || keys['ArrowUp'] || keys['ArrowDown'] || keys['KeyA'] || keys['KeyD'] || keys['KeyW'] || keys['KeyS'];
+  const moving = kbMoving || toTarget > 5;
+  const facing = (w.targetX < w.px) ? -1 : 1;
 
   if (w.caught) {
     // Caught animation — flash red
@@ -468,7 +499,7 @@ function drawWalk() {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    const moveHint = touchCtrl.isTouch ? 'Use joystick to move' : 'Arrow keys / WASD to move';
+    const moveHint = touchCtrl.isTouch ? 'Tap to move' : 'Tap or Arrow keys to move';
     ctx.fillText(`${moveHint}  |  Collect sparkly items!`, W / 2, H - 10);
   }
 
@@ -482,6 +513,16 @@ function drawWalk() {
     }
   }
 
-  drawTouchControls();
+  // Draw target indicator when moving via tap
+  if (!w.caught && toTarget > 5) {
+    ctx.globalAlpha = 0.3 + Math.sin(game.time * 6) * 0.15;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(w.targetX, w.targetY, 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
   drawFloats();
 }

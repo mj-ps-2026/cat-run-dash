@@ -116,6 +116,11 @@ function setBgMusicTheme(screen) {
   }
 }
 
+function getMusicTempoMultiplier() {
+  if (typeof getPawMood !== 'function') return 1.0;
+  return 1.0 + getPawMood() * 0.15;
+}
+
 function runBgMusicBeat() {
   if (!bgMusic.enabled) return;
   const th = BG_THEMES[bgMusic.theme] || BG_THEMES.care;
@@ -126,6 +131,14 @@ function runBgMusicBeat() {
   const bass = th.bass[b];
   if (bass) playMusicNote(BG_NOTES[bass], beatSec * 1.6, 0.028, 'triangle');
   bgMusic.beat++;
+  // Dynamically adjust interval speed based on mood
+  const tempoMult = getMusicTempoMultiplier();
+  const newMs = th.msPerBeat / tempoMult;
+  if (bgMusic._lastMs !== newMs && bgMusic.interval) {
+    clearInterval(bgMusic.interval);
+    bgMusic._lastMs = newMs;
+    bgMusic.interval = setInterval(runBgMusicBeat, newMs);
+  }
 }
 
 function startBgMusic() {

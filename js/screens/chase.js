@@ -18,6 +18,7 @@ function initChase() {
   c.invincible = 0;
   c.particles = [];
   c.houseY = 120;
+  c.targetX = c.px;
 
   // Place dogs
   c.dogs = [];
@@ -65,21 +66,39 @@ function updateChase(dt) {
     return;
   }
 
-  // Player movement
-  const speed = c.dashing ? 350 : 180;
-  let dx = 0, dy = 0;
-  if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
-  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
-  if (keys['ArrowUp'] || keys['KeyW']) dy -= 1;
-  if (keys['ArrowDown'] || keys['KeyS']) dy += 1;
-  if (dx || dy) {
-    const mag = Math.sqrt(dx * dx + dy * dy);
-    dx /= mag; dy /= mag;
+  // Player movement — happy cats are faster
+  const moodBonus = 1.0 + getPawMood() * 0.3;
+  const baseSpeed = (c.dashing ? 350 : 180) * moodBonus;
+  const forwardSpeed = (c.dashing ? 350 : 120) * moodBonus;
+
+  // Constant forward (upward) progress
+  c.py -= forwardSpeed * dt;
+
+  // Horizontal steering: keyboard
+  let hDx = 0;
+  if (keys['ArrowLeft'] || keys['KeyA']) hDx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) hDx += 1;
+
+  // Click/tap sets horizontal target
+  if (c.targetX === undefined) c.targetX = c.px;
+  if (mouse.clicked || (mouse.down && touchCtrl.isTouch)) {
+    c.targetX = mouse.x;
   }
-  c.vx = dx * speed;
-  c.vy = dy * speed;
+
+  // Slide toward target X (when no keyboard input)
+  if (hDx === 0) {
+    const hdx = c.targetX - c.px;
+    if (Math.abs(hdx) > 3) {
+      hDx = hdx > 0 ? 1 : -1;
+      hDx *= Math.min(1, Math.abs(hdx) / 40);
+    }
+  } else {
+    c.targetX = c.px;
+  }
+
+  c.vx = hDx * baseSpeed;
+  c.vy = -forwardSpeed;
   c.px += c.vx * dt;
-  c.py += c.vy * dt;
   c.px = Math.max(20, Math.min(W - 20, c.px));
   c.py = Math.max(40, Math.min(c.mapH - 20, c.py));
 
@@ -284,8 +303,8 @@ function drawChase() {
     ctx.arc(c.px, playerScreenY, 35, 0, Math.PI * 2);
     ctx.fill();
   }
-  const moving = c.vx !== 0 || c.vy !== 0;
-  const pFacing = c.vx < 0 ? -1 : 1;
+  const moving = true;
+  const pFacing = c.vx < -5 ? -1 : c.vx > 5 ? 1 : 1;
   drawCat(c.px, playerScreenY, game.currentCat, 3, pFacing, game.time, moving);
   ctx.globalAlpha = 1;
 
@@ -360,7 +379,7 @@ function drawChase() {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  const chaseHint = touchCtrl.isTouch ? 'Joystick to move  |  Tap DASH button' : 'WASD/Arrows to move  |  Space to Dash';
+  const chaseHint = touchCtrl.isTouch ? 'Tap to steer  |  Tap DASH button' : 'Tap or Arrows to steer  |  Space to Dash';
   ctx.fillText(chaseHint, W / 2, H - 8);
 
   drawTouchControls();

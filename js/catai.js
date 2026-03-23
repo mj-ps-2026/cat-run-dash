@@ -45,6 +45,8 @@ function getFurnitureSpots() {
   if (owned.includes('toybox_pink'))     { const p = fp('toybox_pink'); spots.push({ x: p.x, y: py20('toybox_pink'), behavior: 'playing', weight: 3 }); }
   if (owned.includes('nightlight_star')) { const p = fp('nightlight_star'); spots.push({ x: p.x, y: py20('nightlight_star'), behavior: 'sitting', weight: 1 }); }
   if (owned.includes('painting_sky'))    { const p = fp('painting_sky'); spots.push({ x: p.x, y: py20('painting_sky'), behavior: 'watching', weight: 3 }); }
+  if (owned.includes('couch'))          { const p = fp('couch'); spots.push({ x: p.x, y: p.y, behavior: 'sitting', weight: 3 }, { x: p.x, y: p.y, behavior: 'sleeping', weight: 2 }); }
+  if (owned.includes('couch_blue'))     { const p = fp('couch_blue'); spots.push({ x: p.x, y: p.y, behavior: 'sitting', weight: 3 }, { x: p.x, y: p.y, behavior: 'sleeping', weight: 2 }); }
   // Toys on the floor — positions are dynamic
   game.ownedToys.forEach((toyId, i) => {
     const tp = getToyXY(i);
@@ -90,6 +92,8 @@ function getFurnitureHitboxes() {
     { id: 'nightlight_star', w: 28, h: 35, offy: -10, behavior: 'sitting', label: 'Star Light' },
     { id: 'painting',    w: 58, h: 48, offy: -20, behavior: 'watching', label: 'Cat Painting' },
     { id: 'painting_sky', w: 58, h: 48, offy: -20, behavior: 'watching', label: 'Sky Painting' },
+    { id: 'couch',       w: 100, h: 40, offy: -5, behavior: 'sitting', label: 'Cozy Couch' },
+    { id: 'couch_blue',  w: 100, h: 40, offy: -5, behavior: 'sitting', label: 'Blue Couch' },
   ];
 
   defs.forEach(d => {
@@ -131,6 +135,16 @@ function getMoodEmotes(state) {
 
 function isCatSad() {
   return getPawMood() < 0.2;
+}
+
+const SLEEP_SPOT_IDS = ['catbed', 'catbed_blue', 'catbed_green', 'blanket', 'blanket_blue', 'blanket_pink', 'hammock', 'hammock_green', 'couch', 'couch_blue'];
+
+function getRandomSleepSpot() {
+  const available = game.furniture.filter(id => SLEEP_SPOT_IDS.includes(id));
+  if (available.length === 0) return null;
+  const pick = available[Math.floor(Math.random() * available.length)];
+  const pos = getFurnitureXY(pick);
+  return { x: pos.x, y: pos.y + (pick.startsWith('hammock') ? 30 : 0) };
 }
 
 function initCatAI() {
@@ -183,6 +197,11 @@ function updateCatAI(dt) {
       const dur = BEHAVIOR_DURATION[ai.state];
       ai.stateTimer = dur[0] + Math.random() * (dur[1] - dur[0]);
       ai.nextStateTimer = ai.stateTimer;
+      // Auto-credit play when cat plays at a toy/tower/toybox (no button needed)
+      if (ai.state === 'playing' && !ai._pendingCredit && game.care.play < MAX_PER_ACTIVITY) {
+        ai._pendingCredit = 'play';
+        ai._pendingCreditAmount = 1;
+      }
       // Maybe emote on arrival
       maybeEmote(ai);
     } else {
@@ -436,9 +455,22 @@ function updateHouseCats(dt) {
     const st = getHouseCatState(idx);
     st.timer -= dt;
 
-    // Night mode — force sleep
-    if (game.isNight && st.state !== 'sleeping') {
-      st.state = 'sleeping'; st.timer = 30; return;
+    // Night mode — send to sleep spot or sleep in place
+    if (game.isNight && st.state !== 'sleeping' && st.state !== 'walking') {
+      const spot = getRandomSleepSpot();
+      if (spot) {
+        st.targetX = spot.x + (Math.random() - 0.5) * 20;
+        st.targetY = Math.min(spot.y, H * 0.63);
+        st.state = 'walking';
+        st.timer = 35;
+        st._nightWalk = true;
+      } else {
+        st.state = 'sleeping'; st.timer = 30;
+      }
+      return;
+    }
+    if (game.isNight && st.state === 'walking' && st._nightWalk) {
+      // let it walk to the sleep spot; handled below
     }
 
     if (st.state === 'walking') {
@@ -446,8 +478,14 @@ function updateHouseCats(dt) {
       const dist = Math.hypot(dx, dy);
       if (dist < 5) {
         st.x = st.targetX; st.y = st.targetY;
-        st.state = ['idle', 'sitting', 'sleeping', 'grooming'][Math.floor(Math.random() * 4)];
-        st.timer = 3 + Math.random() * 5;
+        if (st._nightWalk) {
+          st.state = 'sleeping';
+          st.timer = 30;
+          st._nightWalk = false;
+        } else {
+          st.state = ['idle', 'sitting', 'sleeping', 'grooming'][Math.floor(Math.random() * 4)];
+          st.timer = 3 + Math.random() * 5;
+        }
       } else {
         const hcChasing = game.laserActive || (game.thrownToy && !game.thrownToy.settled) || game.throwGrab;
         const spd = hcChasing ? 250 : 40;

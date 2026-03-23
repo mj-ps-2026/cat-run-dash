@@ -495,6 +495,48 @@ function drawFurniture() {
     ctx.strokeStyle = '#c8a060'; ctx.lineWidth = 1.5; ctx.strokeRect(px2+1, py2+1, 48, 38);
   }); }
 
+  if (owned.includes('couch')) { withOffset('couch', () => {
+    const cx = 280, cy = H * 0.54;
+    // Back
+    ctx.fillStyle = '#b05a50';
+    drawRoundRect(cx, cy - 18, 80, 22, 6);
+    ctx.fill();
+    // Seat
+    ctx.fillStyle = '#c87060';
+    drawRoundRect(cx, cy + 2, 80, 16, 5);
+    ctx.fill();
+    // Arms
+    ctx.fillStyle = '#a04a40';
+    drawRoundRect(cx - 8, cy - 12, 12, 32, 4);
+    ctx.fill();
+    drawRoundRect(cx + 76, cy - 12, 12, 32, 4);
+    ctx.fill();
+    // Cushion lines
+    ctx.strokeStyle = '#a05848';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx + 27, cy + 3); ctx.lineTo(cx + 27, cy + 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 53, cy + 3); ctx.lineTo(cx + 53, cy + 16); ctx.stroke();
+  }); }
+
+  if (owned.includes('couch_blue')) { withOffset('couch_blue', () => {
+    const cx = 280, cy = H * 0.54;
+    ctx.fillStyle = '#4466aa';
+    drawRoundRect(cx, cy - 18, 80, 22, 6);
+    ctx.fill();
+    ctx.fillStyle = '#5577bb';
+    drawRoundRect(cx, cy + 2, 80, 16, 5);
+    ctx.fill();
+    ctx.fillStyle = '#3355aa';
+    drawRoundRect(cx - 8, cy - 12, 12, 32, 4);
+    ctx.fill();
+    drawRoundRect(cx + 76, cy - 12, 12, 32, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#4466aa';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx + 27, cy + 3); ctx.lineTo(cx + 27, cy + 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 53, cy + 3); ctx.lineTo(cx + 53, cy + 16); ctx.stroke();
+  }); }
+
   // ── Owned toys on the floor ──
   const toys = game.ownedToys;
   // Toy positions (spread across the floor)

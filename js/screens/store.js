@@ -136,6 +136,7 @@ function drawStore() {
     const owned = game.inventory.includes(item.id) || game.furniture.includes(item.id) || game.ownedToys.includes(item.id);
     const equipped = Object.values(game.equipped).includes(item.id);
     const hover = hitBox(mouse.x, mouse.y, cx, cy, cardW, cardH);
+    const priceLabel = item.price === 0 ? 'Free' : `$${item.price}`;
 
     // Card background
     ctx.fillStyle = owned ? '#e8ffe8' : (hover ? '#fff8f0' : '#fff');
@@ -192,7 +193,7 @@ function drawStore() {
         const bbx = cx + cardW - 68;
         const bby = cy + cardH - 34;
         const canAfford = game.money >= item.price;
-        drawButton(bbx, bby, 60, 26, `$${item.price}`, canAfford ? '#4a9' : '#999', canAfford);
+        drawButton(bbx, bby, 60, 26, priceLabel, canAfford ? '#4a9' : '#999', canAfford);
         if (mouse.clicked && hitBox(mouse.x, mouse.y, bbx, bby, 60, 26)) {
           if (canAfford) {
             buyItem(item);
@@ -207,7 +208,7 @@ function drawStore() {
       const bbx = cx + cardW - 68;
       const bby = cy + cardH - 34;
       const canAfford = game.money >= item.price;
-      drawButton(bbx, bby, 60, 26, `$${item.price}`, canAfford ? '#4a9' : '#999', canAfford);
+      drawButton(bbx, bby, 60, 26, priceLabel, canAfford ? '#4a9' : '#999', canAfford);
       if (mouse.clicked && hitBox(mouse.x, mouse.y, bbx, bby, 60, 26)) {
         if (canAfford) {
           buyItem(item);

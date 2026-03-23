@@ -27,13 +27,23 @@ function updateCare(dt) {
     }
   }
 
-  // During night, force all cats to sleep
+  // During night, send cats to sleep spots (or sleep in place)
   if (game.isNight) {
     const ai = game.catAI;
-    if (ai.state !== 'sleeping') {
-      ai.state = 'sleeping';
-      ai.stateTimer = 30;
-      ai.nextStateTimer = 30;
+    if (ai.state !== 'sleeping' && ai.state !== 'walking') {
+      const spot = getRandomSleepSpot();
+      if (spot) {
+        ai.targetX = spot.x;
+        ai.targetY = Math.min(spot.y, H * 0.63);
+        ai._queuedBehavior = 'sleeping';
+        ai.state = 'walking';
+        ai.stateTimer = 99;
+        ai.nextStateTimer = 35;
+      } else {
+        ai.state = 'sleeping';
+        ai.stateTimer = 30;
+        ai.nextStateTimer = 30;
+      }
     }
   }
 
@@ -316,8 +326,19 @@ function drawCare() {
         } else if (game.ownedToys.length === 0) {
           addFloat(catX, catY - 60, 'Get a toy from the store first! 🧶', '#fb4');
         } else {
-          game.careMode = 'play';
-          addFloat(catX, catY - 60, 'Click near your cat to play!', '#fb4');
+          // Auto-play: send cat to a random owned toy
+          const toyIdx = Math.floor(Math.random() * game.ownedToys.length);
+          const tp = getToyXY(toyIdx);
+          const ai = game.catAI;
+          ai.targetX = Math.max(50, Math.min(W - 160, tp.x));
+          ai.targetY = Math.max(250, Math.min(H * 0.63, tp.y - 10));
+          ai._queuedBehavior = 'playing';
+          ai._pendingCredit = 'play';
+          ai._pendingCreditAmount = 1;
+          ai.state = 'walking';
+          ai.stateTimer = 99;
+          ai.nextStateTimer = 8;
+          addFloat(catX, catY - 60, '🎉 Play time!', '#fb4');
         }
       }
     }

@@ -72,4 +72,10 @@ function drawTitle() {
       game.screen = 'collection';
     }
   }
+
+  // Signature
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Made by Cora', W - 15, H - 12);
 }

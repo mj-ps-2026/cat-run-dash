@@ -35,7 +35,7 @@ const STORE_CAT_COLORS = ['#f87', '#fb4', '#b8f', '#8d6'];
 
 const STORE_ITEMS = [
   // ── Food (consumable — auto-feeds your cat) ──
-  { id: 'kibble',       cat: 'food', name: 'Kibble',        price: 2,  icon: '🥫', desc: '+1 Feed',   effect: { act: 'feed', amount: 1 } },
+  { id: 'kibble',       cat: 'food', name: 'Kibble',        price: 0,  icon: '🥫', desc: '+1 Feed',   effect: { act: 'feed', amount: 1 } },
   { id: 'tuna',         cat: 'food', name: 'Tuna Can',      price: 4,  icon: '🐟', desc: '+2 Feed',   effect: { act: 'feed', amount: 2 } },
   { id: 'milk',         cat: 'food', name: 'Cat Milk',      price: 3,  icon: '🥛', desc: '+1 Feed',   effect: { act: 'feed', amount: 1 } },
   { id: 'chicken',      cat: 'food', name: 'Chicken',       price: 5,  icon: '🍗', desc: '+2 Feed',   effect: { act: 'feed', amount: 2 } },
@@ -44,7 +44,7 @@ const STORE_ITEMS = [
   { id: 'fancyfeast',   cat: 'food', name: 'Fancy Feast',   price: 12, icon: '🍖', desc: '+5 Feed',   effect: { act: 'feed', amount: 5 } },
   { id: 'cake',         cat: 'food', name: 'Cat Cake',      price: 15, icon: '🎂', desc: '+5 Feed',   effect: { act: 'feed', amount: 5 } },
   // ── Toys (consumable — auto-plays) ──
-  { id: 'yarn',         cat: 'toys', name: 'Yarn Ball',     price: 2,  icon: '🧶', desc: '+1 Play',   effect: { act: 'play', amount: 1 } },
+  { id: 'yarn',         cat: 'toys', name: 'Yarn Ball',     price: 0,  icon: '🧶', desc: '+1 Play',   effect: { act: 'play', amount: 1 } },
   { id: 'bell',         cat: 'toys', name: 'Jingle Bell',   price: 3,  icon: '🔔', desc: '+1 Play',   effect: { act: 'play', amount: 1 } },
   { id: 'mousetoy',     cat: 'toys', name: 'Mouse Toy',     price: 4,  icon: '🐭', desc: '+2 Play',   effect: { act: 'play', amount: 2 } },
   { id: 'fish_toy',     cat: 'toys', name: 'Fish Toy',      price: 5,  icon: '🐠', desc: '+2 Play',   effect: { act: 'play', amount: 2 } },
@@ -71,7 +71,7 @@ const STORE_ITEMS = [
   { id: 'star_glasses', cat: 'accessories', name: 'Star Glasses',  price: 10, icon: '⭐', desc: 'Superstar',         slot: 'eyes' },
   { id: 'monocle',      cat: 'accessories', name: 'Monocle',       price: 12, icon: '🧐', desc: 'Distinguished',     slot: 'eyes' },
   // ── Accessories: Neck ──
-  { id: 'collar_red',   cat: 'accessories', name: 'Red Collar',    price: 4,  icon: '🔴', desc: 'Stylish collar',    slot: 'neck' },
+  { id: 'collar_red',   cat: 'accessories', name: 'Red Collar',    price: 0,  icon: '🔴', desc: 'Stylish collar',    slot: 'neck' },
   { id: 'collar_gold',  cat: 'accessories', name: 'Gold Collar',   price: 8,  icon: '💛', desc: 'Fancy collar',      slot: 'neck' },
   { id: 'collar_purple',cat: 'accessories', name: 'Purple Collar', price: 6,  icon: '💜', desc: 'Elegant collar',    slot: 'neck' },
   { id: 'bowtie',       cat: 'accessories', name: 'Bowtie',        price: 7,  icon: '🎀', desc: 'Formal & cute',     slot: 'neck' },
@@ -94,7 +94,7 @@ const STORE_ITEMS = [
   { id: 'scratchpost_dark', cat: 'furniture', name: 'Dark Scratch Post', price: 7, icon: '🪵', desc: 'Sleek & modern' },
   { id: 'cattower',     cat: 'furniture', name: 'Cat Tower',       price: 15, icon: '🏰', desc: 'Climb & play' },
   { id: 'cattower_pink',cat: 'furniture', name: 'Pink Cat Tower',  price: 16, icon: '🏰', desc: 'Cute climbing' },
-  { id: 'foodbowl',     cat: 'furniture', name: 'Fancy Bowl',      price: 4,  icon: '🥣', desc: 'Eat in style' },
+  { id: 'foodbowl',     cat: 'furniture', name: 'Fancy Bowl',      price: 0,  icon: '🥣', desc: 'Eat in style' },
   { id: 'foodbowl_blue',cat: 'furniture', name: 'Blue Bowl',       price: 4,  icon: '🥣', desc: 'Ocean vibes' },
   { id: 'fountain',     cat: 'furniture', name: 'Water Fountain',  price: 10, icon: '⛲', desc: 'Fresh water' },
   { id: 'fountain_gold',cat: 'furniture', name: 'Gold Fountain',   price: 14, icon: '⛲', desc: 'Luxury hydration' },
@@ -116,6 +116,8 @@ const STORE_ITEMS = [
   { id: 'nightlight_star', cat: 'furniture', name: 'Star Light',   price: 9,  icon: '⭐', desc: 'Twinkle glow' },
   { id: 'painting',     cat: 'furniture', name: 'Cat Painting',    price: 9,  icon: '🖼️', desc: 'Meow Lisa' },
   { id: 'painting_sky', cat: 'furniture', name: 'Sky Painting',    price: 9,  icon: '🖼️', desc: 'Dreamy clouds' },
+  { id: 'couch',        cat: 'furniture', name: 'Cozy Couch',      price: 12, icon: '🛋️', desc: 'Sit or nap' },
+  { id: 'couch_blue',   cat: 'furniture', name: 'Blue Couch',      price: 12, icon: '🛋️', desc: 'Cool comfort' },
 ];
 
 // Behavior emotes — chosen based on mood (paw fullness)
@@ -195,13 +197,14 @@ const FURNITURE_DEFAULTS = {
   toybox: { x: 258, y: 336 }, toybox_pink: { x: 280, y: 336 },
   nightlight: { x: 540, y: 278 }, nightlight_star: { x: 555, y: 278 },
   painting: { x: 375, y: 162 }, painting_sky: { x: 425, y: 162 },
+  couch: { x: 320, y: 340 }, couch_blue: { x: 320, y: 340 },
 };
 
 // Map variant IDs to their base furniture type for behavior/hitbox purposes
 const FURNITURE_BASE = {};
 Object.keys(FURNITURE_DEFAULTS).forEach(id => {
   // Base type is the part before the last underscore variant, if it matches a known base
-  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting'];
+  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch'];
   FURNITURE_BASE[id] = bases.find(b => id === b || id.startsWith(b + '_')) || id;
 });
 
