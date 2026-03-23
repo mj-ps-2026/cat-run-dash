@@ -137,17 +137,27 @@ function updateWalk(dt) {
   w.scratchCooldown = Math.max(0, w.scratchCooldown - dt);
   if (w.scratchFlash > 0) w.scratchFlash -= dt;
 
-  // Click/tap to set movement target (not Go Home or Scratch)
+  // Pointer-driven move: only glide while finger/mouse is held (not click-to-run)
+  const homeHit = hitBox(mouse.x, mouse.y, W - 130, 10, 120, 35);
   const scratchBtnHit = w.dogs.length > 0 && hitBox(mouse.x, mouse.y, WALK_SCRATCH_BTN_X, WALK_SCRATCH_BTN_Y, WALK_SCRATCH_BTN_W, WALK_SCRATCH_BTN_H);
-  if (mouse.clicked && !hitBox(mouse.x, mouse.y, W - 130, 10, 120, 35) && !scratchBtnHit) {
+  if (mouse.clicked && !homeHit && !scratchBtnHit) {
     w.targetX = mouse.x;
     w.targetY = mouse.y;
   }
-  // Continuous touch drag also updates target
-  if (mouse.down && touchCtrl.isTouch && touchCtrl.uiId !== null) {
-    w.targetX = mouse.x;
-    w.targetY = mouse.y;
+  if (mouse.down && !homeHit && !scratchBtnHit) {
+    if (touchCtrl.isTouch) {
+      if (touchCtrl.uiId !== null) {
+        w.targetX = mouse.x;
+        w.targetY = mouse.y;
+      }
+    } else {
+      w.targetX = mouse.x;
+      w.targetY = mouse.y;
+    }
   }
+
+  // Active pointer = held mouse (desktop) or steering touch; pause over Go Home / Scratch
+  const pointerMovesCat = mouse.down && (!touchCtrl.isTouch || touchCtrl.uiId !== null) && !homeHit && !scratchBtnHit;
 
   // Keyboard overrides target
   let kbDx = 0, kbDy = 0;
@@ -163,11 +173,11 @@ function updateWalk(dt) {
     w.targetX = w.px;
     w.targetY = w.py;
   } else {
-    // Move toward click/tap target
+    // Move toward target only while user is holding the pointer down
     const tdx = w.targetX - w.px;
     const tdy = w.targetY - w.py;
     const tdist = Math.hypot(tdx, tdy);
-    if (tdist > 5) {
+    if (tdist > 5 && pointerMovesCat) {
       w.px += (tdx / tdist) * speed * dt;
       w.py += (tdy / tdist) * speed * dt;
       w.distWalked += speed * dt;
@@ -479,8 +489,11 @@ function drawWalk() {
 
   // Draw player cat
   const toTarget = Math.hypot(w.targetX - w.px, w.targetY - w.py);
+  const homeHitDraw = hitBox(mouse.x, mouse.y, W - 130, 10, 120, 35);
+  const scratchHitDraw = w.dogs.length > 0 && hitBox(mouse.x, mouse.y, WALK_SCRATCH_BTN_X, WALK_SCRATCH_BTN_Y, WALK_SCRATCH_BTN_W, WALK_SCRATCH_BTN_H);
+  const pointerHeld = mouse.down && (!touchCtrl.isTouch || touchCtrl.uiId !== null) && !homeHitDraw && !scratchHitDraw;
   const kbMoving = keys['ArrowLeft'] || keys['ArrowRight'] || keys['ArrowUp'] || keys['ArrowDown'] || keys['KeyA'] || keys['KeyD'] || keys['KeyW'] || keys['KeyS'];
-  const moving = kbMoving || toTarget > 5;
+  const moving = kbMoving || (toTarget > 5 && pointerHeld);
   const facing = (w.targetX < w.px) ? -1 : 1;
 
   if (w.caught) {
@@ -556,7 +569,7 @@ function drawWalk() {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    const moveHint = touchCtrl.isTouch ? 'Tap to move' : 'Tap or Arrow keys to move';
+    const moveHint = touchCtrl.isTouch ? 'Hold & drag to move' : 'Hold click or Arrow keys to move';
     ctx.fillText(`${moveHint}  |  Collect sparkly items!`, W / 2, H - 10);
   }
 
@@ -570,8 +583,8 @@ function drawWalk() {
     }
   }
 
-  // Draw target indicator when moving via tap
-  if (!w.caught && toTarget > 5) {
+  // Draw target indicator only while pointer is held (matches movement rules)
+  if (!w.caught && toTarget > 5 && pointerHeld) {
     ctx.globalAlpha = 0.3 + Math.sin(game.time * 6) * 0.15;
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.5;
