@@ -938,8 +938,9 @@ function drawPawMeter(x, y, care, scale = 1) {
 // ============================================================
 // FLOATING TEXT
 // ============================================================
-function addFloat(x, y, text, color = '#fff') {
-  game.floats.push({ x, y, text, color, life: 1.5 });
+function addFloat(x, y, text, color = '#fff', opts) {
+  const screen = opts && opts.screen;
+  game.floats.push({ x, y, text, color, life: 1.5, screen: !!screen });
 }
 
 function updateFloats(dt) {
@@ -950,13 +951,15 @@ function updateFloats(dt) {
   });
 }
 
-function drawFloats() {
+function drawFloats(scrollX) {
+  const sx = scrollX || 0;
   game.floats.forEach(f => {
+    const fx = f.screen ? f.x : f.x - sx;
     ctx.globalAlpha = Math.min(1, f.life * 2);
     ctx.fillStyle = f.color;
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(f.text, f.x, f.y);
+    ctx.fillText(f.text, fx, f.y);
     ctx.globalAlpha = 1;
   });
 }
@@ -1018,45 +1021,54 @@ function drawGrassBg() {
   }
 }
 
-function drawSkyBg() {
+function drawSkyBg(totalW) {
+  const tw = totalW || W;
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#87CEEB');
   grad.addColorStop(0.6, '#b8e4f7');
   grad.addColorStop(1, '#7ec87e');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-  // Clouds
+  ctx.fillRect(0, 0, tw, H);
+  // Clouds — repeat across wide home
   ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  [[100, 60, 50], [300, 40, 40], [550, 70, 35], [700, 30, 45]].forEach(([cx, cy, r]) => {
-    drawEllipse(cx + Math.sin(game.time * 0.1 + cx) * 10, cy, r, r * 0.5);
-    ctx.fill();
-    drawEllipse(cx + r * 0.6, cy - 5, r * 0.7, r * 0.4);
-    ctx.fill();
-    drawEllipse(cx - r * 0.5, cy + 3, r * 0.6, r * 0.35);
-    ctx.fill();
-  });
+  const cloudSets = [[100, 60, 50], [300, 40, 40], [550, 70, 35], [700, 30, 45]];
+  for (let seg = 0; seg < HOME_ROOMS; seg++) {
+    const ox = seg * HOME_ROOM_W;
+    cloudSets.forEach(([cx, cy, r]) => {
+      drawEllipse(ox + cx + Math.sin(game.time * 0.1 + cx + seg) * 10, cy, r, r * 0.5);
+      ctx.fill();
+      drawEllipse(ox + cx + r * 0.6, cy - 5, r * 0.7, r * 0.4);
+      ctx.fill();
+      drawEllipse(ox + cx - r * 0.5, cy + 3, r * 0.6, r * 0.35);
+      ctx.fill();
+    });
+  }
 }
 
 function drawHomeBg() {
-  drawSkyBg();
+  const tw = typeof HOME_TOTAL_W !== 'undefined' ? HOME_TOTAL_W : W;
+  drawSkyBg(tw);
   // Floor
   ctx.fillStyle = '#f5deb3';
-  ctx.fillRect(0, H * 0.65, W, H * 0.35);
+  ctx.fillRect(0, H * 0.65, tw, H * 0.35);
   // Wall
   ctx.fillStyle = '#ffe8d0';
-  ctx.fillRect(0, H * 0.15, W, H * 0.5);
+  ctx.fillRect(0, H * 0.15, tw, H * 0.5);
   // Baseboard
   ctx.fillStyle = '#d4a87a';
-  ctx.fillRect(0, H * 0.63, W, H * 0.04);
-  // Window
-  ctx.fillStyle = '#87CEEB';
-  drawRoundRect(550, H * 0.2, 120, 100, 8);
-  ctx.fill();
+  ctx.fillRect(0, H * 0.63, tw, H * 0.04);
+  // Window in each room segment
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 4;
-  ctx.strokeRect(552, H * 0.2 + 2, 116, 96);
-  ctx.beginPath(); ctx.moveTo(610, H * 0.2); ctx.lineTo(610, H * 0.2 + 100); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(550, H * 0.2 + 50); ctx.lineTo(670, H * 0.2 + 50); ctx.stroke();
+  for (let seg = 0; seg < HOME_ROOMS; seg++) {
+    const ox = seg * HOME_ROOM_W;
+    ctx.fillStyle = '#87CEEB';
+    drawRoundRect(ox + 550, H * 0.2, 120, 100, 8);
+    ctx.fill();
+    ctx.strokeRect(ox + 552, H * 0.2 + 2, 116, 96);
+    ctx.beginPath(); ctx.moveTo(ox + 610, H * 0.2); ctx.lineTo(ox + 610, H * 0.2 + 100); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox + 550, H * 0.2 + 50); ctx.lineTo(ox + 670, H * 0.2 + 50); ctx.stroke();
+  }
 }
 
 // ============================================================

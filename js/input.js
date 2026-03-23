@@ -47,6 +47,14 @@ canvas.addEventListener('click', e => {
   mouse.clicked = true;
 });
 
+canvas.addEventListener('wheel', e => {
+  if (game.screen !== 'care') return;
+  e.preventDefault();
+  const maxS = Math.max(0, HOME_TOTAL_W - W);
+  const delta = e.deltaY + e.deltaX;
+  game.homeScrollX = Math.max(0, Math.min(maxS, (game.homeScrollX || 0) + delta * 0.65));
+}, { passive: false });
+
 // --- Touch helpers ---
 function touchToCanvas(t, rect) {
   return {

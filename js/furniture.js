@@ -419,6 +419,7 @@ function drawFurniture() {
   if (owned.includes('litterbox')) { withOffset('litterbox', () => {
     const lx = 620, ly = 392;
     const d = game.litterboxDirt || 0;
+    const clumps = game.litterboxClumps | 0;
     ctx.fillStyle = '#555';
     drawRoundRect(lx - 28, ly - 10, 56, 40, 8);
     ctx.fill();
@@ -433,6 +434,19 @@ function drawFurniture() {
       ctx.fillStyle = `rgba(75, 50, 35, ${0.12 + d * 0.5})`;
       drawRoundRect(lx - 22, ly - 4, 44, 24, 4);
       ctx.fill();
+    }
+    // Visible clumps after a use (readable even when dirt bar is still low)
+    if (clumps > 0) {
+      const n = Math.min(clumps, 4);
+      ctx.fillStyle = '#5c4030';
+      for (let ci = 0; ci < n; ci++) {
+        const ox = (ci - (n - 1) * 0.5) * 10;
+        drawEllipse(lx + ox + (ci % 2) * 4, ly + 4 + ci * 0.5, 5 + ci * 0.5, 3.5);
+        ctx.fill();
+      }
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💩', lx + 18, ly - 2);
     }
     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.lineWidth = 1;

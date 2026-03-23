@@ -152,6 +152,7 @@ function spawnCatPoop(ai) {
   if (ai._poopInLitterbox && game.furniture.includes('litterbox')) {
     const p = getFurnitureXY('litterbox');
     game.litterboxDirt = Math.min(1, (game.litterboxDirt || 0) + 0.07);
+    game.litterboxClumps = Math.min(8, (game.litterboxClumps || 0) + 1);
     addFloat(p.x, p.y - 36, '💩 In the box', '#7a5');
   } else {
     if (!game.floorPoops) game.floorPoops = [];
@@ -227,6 +228,9 @@ function updateCatAI(dt) {
       ai.x += (dx / dist) * speed * dt;
       ai.y += (dy / dist) * speed * dt;
       ai.facing = dx > 0 ? 1 : -1;
+      if (game.screen === 'care') {
+        ai.x = Math.max(35, Math.min(HOME_TOTAL_W - 35, ai.x));
+      }
     }
   } else {
     // Count down current behavior
@@ -252,7 +256,7 @@ function updateCatAI(dt) {
           addFloat(ai.x, ai.y - 80, `+${gained} ${ACTIVITY_LABELS[idx]}!`, ACTIVITY_COLORS[idx]);
           if (game.care[act] >= MAX_PER_ACTIVITY) {
             setTimeout(() => sfxComplete(), 200);
-            addFloat(680, 230, `${ACTIVITY_LABELS[idx]} Complete!`, '#4a2');
+            addFloat(680, 230, `${ACTIVITY_LABELS[idx]} Complete!`, '#4a2', { screen: true });
           }
           checkGrowth();
         }
@@ -292,7 +296,7 @@ function pickNextBehavior(ai) {
       tx = p.x;
       ty = Math.min(p.y + 10, H * 0.63);
     } else {
-      tx = 100 + Math.random() * (W - 280);
+      tx = 80 + Math.random() * (HOME_TOTAL_W - 160);
       ty = 285 + Math.random() * (H * 0.63 - 295);
     }
     ai.targetX = tx;
@@ -334,7 +338,7 @@ function pickNextBehavior(ai) {
   ai.targetX = chosen.x + (Math.random() - 0.5) * 20;
   ai.targetY = chosen.y + (Math.random() - 0.5) * 10;
   // Clamp to room bounds
-  ai.targetX = Math.max(50, Math.min(W - 160, ai.targetX));
+  ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, ai.targetX));
   ai.targetY = Math.max(250, Math.min(H * 0.63, ai.targetY));
   ai._queuedBehavior = chosen.behavior;
 
@@ -555,7 +559,7 @@ function updateHouseCats(dt) {
       }
     } else if (st.timer <= 0) {
       // Pick new behavior
-      st.targetX = 60 + Math.random() * 480;
+      st.targetX = 60 + Math.random() * (HOME_TOTAL_W - 120);
       st.targetY = 290 + Math.random() * 70;
       st.state = 'walking';
       st.timer = 10;

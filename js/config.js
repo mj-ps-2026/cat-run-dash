@@ -3,6 +3,11 @@
 // Extracted from index.html
 // ============================================================
 
+// Home (care screen): horizontal scrolling "rooms" — each segment is W wide
+const HOME_ROOM_W = 800;
+const HOME_ROOMS = 3;
+const HOME_TOTAL_W = HOME_ROOM_W * HOME_ROOMS;
+
 // ============================================================
 // CAT DEFINITIONS
 // ============================================================

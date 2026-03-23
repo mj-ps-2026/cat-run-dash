@@ -47,9 +47,24 @@ function updateCare(dt) {
     }
   }
 
-  // Interactive laser pointer
+  // Horizontal scroll through home (care)
+  if (game.screen === 'care') {
+    const maxS = Math.max(0, HOME_TOTAL_W - W);
+    if (keys['ArrowLeft']) game.homeScrollX = Math.max(0, (game.homeScrollX || 0) - 280 * dt);
+    if (keys['ArrowRight']) game.homeScrollX = Math.min(maxS, (game.homeScrollX || 0) + 280 * dt);
+  }
+
+  // Throwable grab — keep aim in world space (same frame as AI chase)
+  if (game.throwGrab && mouse.down && game.screen === 'care') {
+    const hsx = game.homeScrollX || 0;
+    game.throwGrab.curX = mouse.x + hsx;
+    game.throwGrab.curY = mouse.y;
+  }
+
+  // Interactive laser pointer (world coordinates)
   if (game.laserActive && mouse.down && game.screen === 'care') {
-    game.laserDotX = mouse.x;
+    const hsx = game.homeScrollX || 0;
+    game.laserDotX = mouse.x + hsx;
     game.laserDotY = mouse.y;
     // All cats chase the dot
     const ai = game.catAI;
@@ -86,7 +101,7 @@ function updateCare(dt) {
       tt.vy *= 0.97;
       // Bounce off walls
       if (tt.x < 30) { tt.x = 30; tt.vx *= -0.6; }
-      if (tt.x > W - 30) { tt.x = W - 30; tt.vx *= -0.6; }
+      if (tt.x > HOME_TOTAL_W - 30) { tt.x = HOME_TOTAL_W - 30; tt.vx *= -0.6; }
       if (tt.y < 100) { tt.y = 100; tt.vy *= -0.6; }
       if (tt.y > H * 0.63) { tt.y = H * 0.63; tt.vy *= -0.4; }
       // Settle when slow enough
@@ -164,9 +179,14 @@ function updateCare(dt) {
 }
 
 function drawCare() {
-  drawHomeBg();
+  const sx = game.homeScrollX || 0;
+  const mx = mouse.x, my = mouse.y;
+  const wx = mx + sx;
 
-  // Draw owned furniture in the home
+  // Scrolling world layer (wider than the viewport)
+  ctx.save();
+  ctx.translate(-sx, 0);
+  drawHomeBg();
   drawFurniture();
 
   // Floor poops (click to clean)
@@ -175,22 +195,11 @@ function drawCare() {
       ctx.font = '22px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('💩', fp.x, fp.y + 6);
-      const hover = hitBox(mouse.x, mouse.y, fp.x - 18, fp.y - 18, 36, 36);
-      if (hover) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        drawRoundRect(fp.x - 22, fp.y - 24, 44, 20, 5);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = '10px sans-serif';
-        ctx.fillText('Click to clean', fp.x, fp.y - 10);
-      }
     });
   }
 
-  // Draw collected cats that are set to show in the house
   drawHouseCats();
 
-  // Placed food item waiting for cat
   if (game.placedFood) {
     const pf = game.placedFood;
     ctx.globalAlpha = 0.2 + Math.sin(game.time * 4) * 0.15;
@@ -204,17 +213,9 @@ function drawCare() {
     ctx.fillText(pf.inBowl ? '🥣' : '🍖', pf.x, pf.y + 6);
   }
 
-  // Stage label
-  ctx.fillStyle = '#a86e3e';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${CAT_BREEDS[game.currentCat].name} — ${STAGES[game.currentStage]}`, W / 2, 35);
-
-  // Draw cat with AI behavior
   drawCatBehavior();
   const catX = game.catAI.x, catY = game.catAI.y;
 
-  // Care animation (floats above cat)
   if (game.careAnim) {
     const a = game.careAnim;
     ctx.font = '36px sans-serif';
@@ -224,6 +225,75 @@ function drawCare() {
     ctx.fillText(a.icon, catX, animY);
     ctx.globalAlpha = 1;
   }
+
+  drawConfetti();
+
+  // Thrown toy in flight (world space)
+  if (game.thrownToy && !game.thrownToy.settled) {
+    const tt = game.thrownToy;
+    const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠' };
+    ctx.save();
+    ctx.translate(tt.x, tt.y);
+    ctx.rotate(game.time * 12);
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(toyIcons[tt.id] || '⚾', 0, 6);
+    ctx.restore();
+    ctx.globalAlpha = 0.3;
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.03, tt.y - tt.vy * 0.03 + 4);
+    ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.06, tt.y - tt.vy * 0.06 + 4);
+    ctx.globalAlpha = 1;
+  }
+
+  // Throw grab — aim line and toy (world space)
+  if (game.throwGrab) {
+    const tg = game.throwGrab;
+    const toyId = game.ownedToys[tg.toyIdx];
+    const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠' };
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(tg.startX, tg.startY);
+    ctx.lineTo(tg.curX, tg.curY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(toyIcons[toyId] || '⚾', tg.curX, tg.curY + 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('Release to throw!', tg.curX, tg.curY - 15);
+  }
+
+  // Furniture hover strokes (world)
+  if (game.screen === 'care') {
+    const boxes = getFurnitureHitboxes();
+    for (const box of boxes) {
+      const hovering = wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h;
+      const beingDragged = game.dragging && game.dragging.id === box.dragId;
+      if (hovering || beingDragged) {
+        ctx.strokeStyle = beingDragged ? 'rgba(255,200,50,0.7)' : 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = beingDragged ? 3 : 2;
+        ctx.setLineDash(beingDragged ? [] : [4, 4]);
+        drawRoundRect(box.x - 2, box.y - 2, box.w + 4, box.h + 4, 6);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (!beingDragged) break;
+      }
+    }
+  }
+
+  ctx.restore();
+
+  // Stage label
+  ctx.fillStyle = '#a86e3e';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${CAT_BREEDS[game.currentCat].name} — ${STAGES[game.currentStage]}`, W / 2, 35);
 
   // Paw meter on the right
   drawPawMeter(680, 280, game.care, 1.2);
@@ -348,7 +418,7 @@ function drawCare() {
           const toyIdx = Math.floor(Math.random() * game.ownedToys.length);
           const tp = getToyXY(toyIdx);
           const ai = game.catAI;
-          ai.targetX = Math.max(50, Math.min(W - 160, tp.x));
+          ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, tp.x));
           ai.targetY = Math.max(250, Math.min(H * 0.63, tp.y - 10));
           ai._queuedBehavior = 'playing';
           ai._pendingCredit = 'play';
@@ -371,19 +441,17 @@ function drawCare() {
     game.screen = 'collection';
   }
 
-  // Drag furniture or click-to-interact
+  // Drag furniture or click-to-interact (wx = screen X + scroll, world space)
   if (game.screen === 'care') {
-    const mx = mouse.x, my = mouse.y;
     const onButton = hitBox(mx, my, 10, 10, 110, 110) || hitBox(mx, my, W - 120, 10, 110, 35);
 
     // Handle drag in progress
     if (game.dragging && mouse.down) {
       const id = game.dragging.id;
-      const newX = mx - game.dragging.offX;
+      const newX = wx - game.dragging.offX;
       const newY = my - game.dragging.offY;
-      // Clamp within room
       game.furniturePos[id] = {
-        x: Math.max(30, Math.min(W - 30, newX)),
+        x: Math.max(30, Math.min(HOME_TOTAL_W - 30, newX)),
         y: Math.max(100, Math.min(H * 0.65, newY))
       };
       game.dragging.moved = true;
@@ -402,11 +470,12 @@ function drawCare() {
     if (mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
       const boxes = getFurnitureHitboxes();
       for (const box of boxes) {
-        if (box.dragId && mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h && !onButton) {
+        if (box.dragId && wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h && !onButton) {
           // Laser toy
           if (box.label === 'Laser') {
             game.laserActive = true;
-            game.laserDotX = mx; game.laserDotY = my;
+            game.laserDotX = wx;
+            game.laserDotY = my;
             break;
           }
           // Throwable toy — grab it
@@ -414,21 +483,15 @@ function drawCare() {
             const tidx = parseInt(box.dragId.split('_')[1]);
             const toyId = game.ownedToys[tidx];
             if (THROWABLE_TOYS.includes(toyId)) {
-              game.throwGrab = { toyIdx: tidx, startX: mx, startY: my, curX: mx, curY: my };
+              game.throwGrab = { toyIdx: tidx, startX: wx, startY: my, curX: wx, curY: my };
               break;
             }
           }
           const pos = box.dragId.startsWith('toy_') ? getToyXY(parseInt(box.dragId.split('_')[1])) : getFurnitureXY(box.dragId);
-          game.dragging = { id: box.dragId, offX: mx - pos.x, offY: my - pos.y, moved: false };
+          game.dragging = { id: box.dragId, offX: wx - pos.x, offY: my - pos.y, moved: false };
           break;
         }
       }
-    }
-
-    // Update throw grab position
-    if (game.throwGrab && mouse.down) {
-      game.throwGrab.curX = mx;
-      game.throwGrab.curY = my;
     }
 
     // Release throw — launch the toy!
@@ -439,7 +502,6 @@ function drawCare() {
       const dist = Math.hypot(dx, dy);
       if (dist > 10) {
         // Fling it!
-        const tp = getToyXY(tg.toyIdx);
         game.thrownToy = {
           id: game.ownedToys[tg.toyIdx],
           toyIdx: tg.toyIdx,
@@ -460,7 +522,7 @@ function drawCare() {
         if (game.floorPoops && game.floorPoops.length > 0) {
           for (let pi = game.floorPoops.length - 1; pi >= 0; pi--) {
             const fp = game.floorPoops[pi];
-            if (Math.hypot(mx - fp.x, my - fp.y) < 28) {
+            if (Math.hypot(wx - fp.x, my - fp.y) < 28) {
               game.floorPoops.splice(pi, 1);
               sfxClick();
               addFloat(fp.x, fp.y - 22, 'Cleaned!', '#6a6');
@@ -473,8 +535,9 @@ function drawCare() {
         if (!skipRoomInteract && game.furniture.includes('litterbox') && (game.litterboxDirt || 0) > 0.02) {
           const boxes = getFurnitureHitboxes();
           const lb = boxes.find(b => b.dragId === 'litterbox');
-          if (lb && mx >= lb.x && mx <= lb.x + lb.w && my >= lb.y && my <= lb.y + lb.h) {
+          if (lb && wx >= lb.x && wx <= lb.x + lb.w && my >= lb.y && my <= lb.y + lb.h) {
             game.litterboxDirt = Math.max(0, game.litterboxDirt - 0.24);
+            game.litterboxClumps = game.litterboxDirt < 0.04 ? 0 : Math.max(0, (game.litterboxClumps || 0) - 1);
             sfxClick();
             const lp = getFurnitureXY('litterbox');
             addFloat(lp.x, lp.y - 44, game.litterboxDirt < 0.04 ? 'Fresh & clean!' : 'Scooping…', '#8a6');
@@ -492,11 +555,11 @@ function drawCare() {
             for (const bid of ['foodbowl', 'foodbowl_blue']) {
               if (game.furniture.includes(bid)) {
                 const pos = getFurnitureXY(bid);
-                if (Math.hypot(mx - pos.x, my - pos.y) < 45) { inBowl = true; break; }
+                if (Math.hypot(wx - pos.x, my - pos.y) < 45) { inBowl = true; break; }
               }
             }
-            game.placedFood = { x: mx, y: my, inBowl };
-            ai.targetX = Math.max(50, Math.min(W - 160, mx));
+            game.placedFood = { x: wx, y: my, inBowl };
+            ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, wx));
             ai.targetY = Math.max(270, Math.min(H * 0.63, my));
             ai._queuedBehavior = 'eating';
             ai._pendingCredit = 'feed';
@@ -504,12 +567,12 @@ function drawCare() {
             ai.state = 'walking';
             ai.stateTimer = 99;
             ai.nextStateTimer = 6;
-            if (inBowl) addFloat(mx, my - 35, 'Bowl Bonus! (+2 Feed)', '#f87');
-            else addFloat(mx, my - 25, 'Food placed!', '#f87');
+            if (inBowl) addFloat(wx, my - 35, 'Bowl Bonus! (+2 Feed)', '#f87');
+            else addFloat(wx, my - 25, 'Food placed!', '#f87');
             sfxClick();
             game.careMode = null;
           } else if (game.careMode === 'brush') {
-            const distToCat = Math.hypot(mx - ai.x, my - ai.y);
+            const distToCat = Math.hypot(wx - ai.x, my - ai.y);
             if (distToCat < 55) {
               ai.state = 'grooming';
               ai._pendingCredit = 'brush';
@@ -521,10 +584,10 @@ function drawCare() {
               sfxClick();
               game.careMode = null;
             } else {
-              addFloat(mx, my - 20, 'Click directly on your cat!', '#b8f');
+              addFloat(wx, my - 20, 'Click directly on your cat!', '#b8f');
             }
           } else if (game.careMode === 'play') {
-            ai.targetX = Math.max(50, Math.min(W - 160, mx));
+            ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, wx));
             ai.targetY = Math.max(250, Math.min(H * 0.63, my));
             ai._queuedBehavior = 'playing';
             ai._pendingCredit = 'play';
@@ -532,7 +595,7 @@ function drawCare() {
             ai.state = 'walking';
             ai.stateTimer = 99;
             ai.nextStateTimer = 8;
-            addFloat(mx, my - 20, '🎉 Play time!', '#fb4');
+            addFloat(wx, my - 20, '🎉 Play time!', '#fb4');
             sfxClick();
             game.careMode = null;
           }
@@ -543,7 +606,7 @@ function drawCare() {
           const boxes = getFurnitureHitboxes();
           let clickedItem = null;
           for (const box of boxes) {
-            if (mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
+            if (wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
               clickedItem = box; break;
             }
           }
@@ -554,10 +617,10 @@ function drawCare() {
             ai.state = 'walking';
             ai.stateTimer = 99;
             ai.nextStateTimer = 8;
-            addFloat(mx, my - 10, clickedItem.label, '#fff');
+            addFloat(wx, my - 10, clickedItem.label, '#fff');
             sfxClick();
           } else {
-            ai.targetX = Math.max(50, Math.min(W - 160, mx));
+            ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, wx));
             ai.targetY = Math.max(250, Math.min(H * 0.63, my));
             ai._queuedBehavior = 'idle';
             ai.state = 'walking';
@@ -567,31 +630,23 @@ function drawCare() {
         }
       }
     }
+  }
 
-    // Furniture hover highlight + drag visual
+  // Furniture hover tooltip (screen space; strokes drawn in world layer above)
+  if (game.screen === 'care') {
     const boxes = getFurnitureHitboxes();
     for (const box of boxes) {
-      const hovering = mx >= box.x && mx <= box.x + box.w && my >= box.y && my <= box.y + box.h;
+      const hovering = wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h;
       const beingDragged = game.dragging && game.dragging.id === box.dragId;
-
-      if (hovering || beingDragged) {
-        ctx.strokeStyle = beingDragged ? 'rgba(255,200,50,0.7)' : 'rgba(255,255,255,0.5)';
-        ctx.lineWidth = beingDragged ? 3 : 2;
-        ctx.setLineDash(beingDragged ? [] : [4, 4]);
-        drawRoundRect(box.x - 2, box.y - 2, box.w + 4, box.h + 4, 6);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        if (!beingDragged) {
-          ctx.fillStyle = 'rgba(0,0,0,0.6)';
-          drawRoundRect(mx - 40, my - 22, 80, 18, 5);
-          ctx.fill();
-          ctx.fillStyle = '#fff';
-          ctx.font = '11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(`${box.label} (drag)`, mx, my - 9);
-        }
-        if (!beingDragged) break;
+      if (hovering && !beingDragged) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        drawRoundRect(mx - 40, my - 22, 80, 18, 5);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${box.label} (drag)`, mx, my - 9);
+        break;
       }
     }
   }
@@ -611,7 +666,7 @@ function drawCare() {
   // Poop / litter tips (rotate)
   const poopTips = [
     'After eating, cats need a bathroom break. A litter box keeps mess in one place.',
-    'Click floor poops or scoop the litter box when it looks dirty.',
+    'You will see clumps in the litter after a visit — scoop anytime, even if it is not full yet.',
   ];
   if (!game.isNight && game.currentCat !== null) {
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -624,61 +679,19 @@ function drawCare() {
     ctx.fillText('💡 ' + poopTips[tipIdx], 18, 141);
   }
 
-  // Interactive laser dot
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('← → keys or scroll wheel to move through the house', W / 2, H - 18);
+
+  // Interactive laser dot (world → screen)
   if (game.laserActive) {
+    const ldx = game.laserDotX - sx;
     ctx.fillStyle = 'rgba(255,0,0,0.7)';
-    ctx.beginPath(); ctx.arc(game.laserDotX, game.laserDotY, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ldx, game.laserDotY, 5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(255,100,100,0.2)';
-    ctx.beginPath(); ctx.arc(game.laserDotX, game.laserDotY, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ldx, game.laserDotY, 12, 0, Math.PI * 2); ctx.fill();
   }
-
-  // Thrown toy in flight
-  if (game.thrownToy && !game.thrownToy.settled) {
-    const tt = game.thrownToy;
-    const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠' };
-    // Spin effect
-    ctx.save();
-    ctx.translate(tt.x, tt.y);
-    ctx.rotate(game.time * 12);
-    ctx.font = '20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(toyIcons[tt.id] || '⚾', 0, 6);
-    ctx.restore();
-    // Motion trail
-    ctx.globalAlpha = 0.3;
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.03, tt.y - tt.vy * 0.03 + 4);
-    ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.06, tt.y - tt.vy * 0.06 + 4);
-    ctx.globalAlpha = 1;
-  }
-
-  // Throw grab — show toy following cursor with aim line
-  if (game.throwGrab) {
-    const tg = game.throwGrab;
-    const toyId = game.ownedToys[tg.toyIdx];
-    const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠' };
-    // Aim line
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(tg.startX, tg.startY);
-    ctx.lineTo(tg.curX, tg.curY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Toy at cursor
-    ctx.font = '24px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(toyIcons[toyId] || '⚾', tg.curX, tg.curY + 8);
-    // Hint
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '11px sans-serif';
-    ctx.fillText('Release to throw!', tg.curX, tg.curY - 15);
-  }
-
-  // Confetti
-  drawConfetti();
 
   // Night mode overlay
   if (game.isNight) {
@@ -687,10 +700,10 @@ function drawCare() {
     // Stars
     ctx.fillStyle = '#fff';
     for (let i = 0; i < 30; i++) {
-      const sx = (i * 167 + 13) % W;
-      const sy = (i * 97 + 43) % (H * 0.4);
+      const starX = (i * 167 + 13) % W;
+      const starY = (i * 97 + 43) % (H * 0.4);
       ctx.globalAlpha = 0.3 + Math.sin(game.time * 2 + i) * 0.3;
-      ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(starX, starY, 1.5, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
     // Moon
@@ -725,7 +738,7 @@ function drawCare() {
     ctx.fillText(hint + '  (click button to cancel)', mouse.x, mouse.y - 24);
   }
 
-  drawFloats();
+  drawFloats(sx);
 }
 
 function checkGrowth() {
@@ -737,11 +750,11 @@ function checkGrowth() {
         resetCare();
         sfxGrow();
         spawnConfetti(game.catAI.x, game.catAI.y - 30, 60);
-        addFloat(300, 250, `Grew into a ${STAGES[game.currentStage]}!`, '#fa0');
+        addFloat(300, 250, `Grew into a ${STAGES[game.currentStage]}!`, '#fa0', { screen: true });
         if (game.currentStage === 3) {
           // Adult! Time for the chase
           setTimeout(() => {
-            addFloat(300, 200, 'Time to run home!', '#f44');
+            addFloat(300, 200, 'Time to run home!', '#f44', { screen: true });
             setTimeout(() => {
               initChase();
               game.screen = 'chase';
@@ -763,7 +776,7 @@ function buyItem(item) {
     const prev = game.care.feed;
     game.care.feed = Math.min(MAX_PER_ACTIVITY, game.care.feed + amount);
     const gained = game.care.feed - prev;
-    addFloat(400, 200, `+${gained} Feed!`, '#4a9');
+    addFloat(400, 200, `+${gained} Feed!`, '#4a9', { screen: true });
     if (game.care.feed >= MAX_PER_ACTIVITY) setTimeout(() => sfxComplete(), 200);
     checkGrowth();
   } else if (item.cat === 'toys') {
@@ -772,7 +785,7 @@ function buyItem(item) {
     const prev = game.care.play;
     game.care.play = Math.min(MAX_PER_ACTIVITY, game.care.play + amount);
     const gained = game.care.play - prev;
-    addFloat(400, 200, `+${gained} Play!`, '#4a9');
+    addFloat(400, 200, `+${gained} Play!`, '#4a9', { screen: true });
     if (!game.ownedToys.includes(item.id)) game.ownedToys.push(item.id);
     if (game.care.play >= MAX_PER_ACTIVITY) setTimeout(() => sfxComplete(), 200);
     checkGrowth();
@@ -781,9 +794,9 @@ function buyItem(item) {
     if (!game.inventory.includes(item.id)) game.inventory.push(item.id);
     game.equipped[item.slot] = item.id;
     sfxEquip();
-    addFloat(400, 200, `${item.name} equipped!`, '#b8f');
+    addFloat(400, 200, `${item.name} equipped!`, '#b8f', { screen: true });
   } else if (item.cat === 'furniture') {
     if (!game.furniture.includes(item.id)) game.furniture.push(item.id);
-    addFloat(400, 200, `${item.name} placed at home!`, '#8d6');
+    addFloat(400, 200, `${item.name} placed at home!`, '#8d6', { screen: true });
   }
 }
