@@ -8,6 +8,61 @@ const HOME_ROOM_W = 800;
 const HOME_ROOMS = 3;
 const HOME_TOTAL_W = HOME_ROOM_W * HOME_ROOMS;
 
+// Visual theme per scroll segment (care home). Used by drawSkyBg / drawHomeBg.
+const HOME_ROOM_THEMES = [
+  {
+    label: 'Living room',
+    skyTop: '#7ec8f0',
+    skyMid: '#c5e8ff',
+    skyBottom: '#8fd4a0',
+    wall: '#f5e6d3',
+    wallBand: '#ead4bc',
+    floor: '#d4a574',
+    floorStyle: 'wood',
+    baseboard: '#a08060',
+    windowX: 520,
+    windowW: 130,
+    windowH: 105,
+    windowTint: '#7eb8d8',
+    frame: '#f8f8f8',
+    decor: 'picture',
+  },
+  {
+    label: 'Bedroom',
+    skyTop: '#9aa8c8',
+    skyMid: '#c8d2e8',
+    skyBottom: '#7a9a80',
+    wall: '#e4eaf2',
+    wallBand: '#d2dce8',
+    floor: '#8b7355',
+    floorStyle: 'carpet',
+    baseboard: '#6a5440',
+    windowX: 480,
+    windowW: 120,
+    windowH: 100,
+    windowTint: '#6a8aaa',
+    frame: '#eee',
+    decor: 'curtains',
+  },
+  {
+    label: 'Kitchen',
+    skyTop: '#a8dcff',
+    skyMid: '#d8f0ff',
+    skyBottom: '#90d498',
+    wall: '#f2f6f0',
+    wallBand: '#e0ebe4',
+    floor: '#c8c8c0',
+    floorStyle: 'tile',
+    baseboard: '#7a9080',
+    windowX: 540,
+    windowW: 125,
+    windowH: 95,
+    windowTint: '#98c8e8',
+    frame: '#fff',
+    decor: 'shelf',
+  },
+];
+
 // ============================================================
 // CAT DEFINITIONS
 // ============================================================

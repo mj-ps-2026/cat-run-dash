@@ -1023,51 +1023,187 @@ function drawGrassBg() {
 
 function drawSkyBg(totalW) {
   const tw = totalW || W;
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#87CEEB');
-  grad.addColorStop(0.6, '#b8e4f7');
-  grad.addColorStop(1, '#7ec87e');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, tw, H);
-  // Clouds — repeat across wide home
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  const cloudSets = [[100, 60, 50], [300, 40, 40], [550, 70, 35], [700, 30, 45]];
-  for (let seg = 0; seg < HOME_ROOMS; seg++) {
+  const n = typeof HOME_ROOMS !== 'undefined' ? HOME_ROOMS : 1;
+  const themes =
+    typeof HOME_ROOM_THEMES !== 'undefined' && HOME_ROOM_THEMES.length
+      ? HOME_ROOM_THEMES
+      : [{ skyTop: '#87CEEB', skyMid: '#b8e4f7', skyBottom: '#7ec87e' }];
+  for (let seg = 0; seg < n; seg++) {
     const ox = seg * HOME_ROOM_W;
+    const th = themes[seg % themes.length];
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, th.skyTop);
+    grad.addColorStop(0.55, th.skyMid);
+    grad.addColorStop(1, th.skyBottom);
+    ctx.fillStyle = grad;
+    ctx.fillRect(ox, 0, HOME_ROOM_W, H);
+  }
+  // Clouds — slightly different drift per room
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  const cloudSets = [[100, 60, 50], [300, 40, 40], [550, 70, 35], [700, 30, 45]];
+  for (let seg = 0; seg < n; seg++) {
+    const ox = seg * HOME_ROOM_W;
+    const drift = Math.sin(game.time * 0.1 + seg * 1.7) * 12;
     cloudSets.forEach(([cx, cy, r]) => {
-      drawEllipse(ox + cx + Math.sin(game.time * 0.1 + cx + seg) * 10, cy, r, r * 0.5);
+      drawEllipse(ox + cx + drift + Math.sin(game.time * 0.1 + cx) * 8, cy, r, r * 0.5);
       ctx.fill();
-      drawEllipse(ox + cx + r * 0.6, cy - 5, r * 0.7, r * 0.4);
+      drawEllipse(ox + cx + r * 0.6 + drift * 0.5, cy - 5, r * 0.7, r * 0.4);
       ctx.fill();
-      drawEllipse(ox + cx - r * 0.5, cy + 3, r * 0.6, r * 0.35);
+      drawEllipse(ox + cx - r * 0.5 + drift * 0.5, cy + 3, r * 0.6, r * 0.35);
       ctx.fill();
     });
   }
 }
 
+function drawHomeFloorPattern(ox, floorY, floorH, theme) {
+  const rw = HOME_ROOM_W;
+  if (theme.floorStyle === 'wood') {
+    ctx.strokeStyle = 'rgba(90, 60, 30, 0.12)';
+    ctx.lineWidth = 1;
+    for (let y = floorY + 20; y < floorY + floorH; y += 34) {
+      ctx.beginPath();
+      ctx.moveTo(ox, y);
+      ctx.lineTo(ox + rw, y);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    for (let i = 0; i < 8; i++) {
+      ctx.fillRect(ox + i * 105, floorY, 52, floorH);
+    }
+  } else if (theme.floorStyle === 'carpet') {
+    ctx.fillStyle = 'rgba(35, 25, 15, 0.14)';
+    for (let i = 0; i < 140; i++) {
+      const rx = ox + ((i * 83 + ox * 0.01) % rw);
+      const ry = floorY + ((i * 47) % floorH);
+      ctx.fillRect(rx, ry, 2, 2);
+    }
+  } else if (theme.floorStyle === 'tile') {
+    const tile = 44;
+    for (let tx = ox; tx < ox + rw; tx += tile) {
+      for (let ty = floorY; ty < floorY + floorH; ty += tile) {
+        const alt = (Math.floor((tx - ox) / tile) + Math.floor((ty - floorY) / tile)) % 2;
+        ctx.fillStyle = alt ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)';
+        ctx.fillRect(tx, ty, tile, tile);
+        ctx.strokeStyle = 'rgba(90, 90, 90, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tx + 0.5, ty + 0.5, tile - 1, tile - 1);
+      }
+    }
+  }
+}
+
+function drawHomeRoomDecor(ox, theme, wx, wy, ww, wh) {
+  const wallTop = H * 0.15;
+  if (theme.decor === 'picture') {
+    ctx.fillStyle = '#8b6914';
+    drawRoundRect(ox + 90, wallTop + 35, 56, 44, 4);
+    ctx.fill();
+    ctx.fillStyle = '#c9a050';
+    ctx.fillRect(ox + 96, wallTop + 41, 44, 32);
+    ctx.fillStyle = '#6a8a6a';
+    ctx.beginPath();
+    ctx.arc(ox + 118, wallTop + 56, 10, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (theme.decor === 'curtains') {
+    ctx.fillStyle = 'rgba(120, 90, 140, 0.55)';
+    drawRoundRect(ox + wx - 8, wy, 14, wh + 8, 3);
+    ctx.fill();
+    drawRoundRect(ox + wx + ww - 6, wy, 14, wh + 8, 3);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(180, 160, 200, 0.35)';
+    ctx.fillRect(ox + wx + ww * 0.35, wy - 6, ww * 0.3, 10);
+  } else if (theme.decor === 'shelf') {
+    ctx.fillStyle = '#a08060';
+    ctx.fillRect(ox + wx - 20, wy + wh + 6, ww + 40, 8);
+    ctx.fillStyle = '#c44';
+    ctx.fillRect(ox + wx + 8, wy + wh - 18, 18, 22);
+    ctx.fillStyle = '#48a';
+    ctx.fillRect(ox + wx + 32, wy + wh - 16, 14, 20);
+    ctx.fillStyle = '#6a4';
+    ctx.fillRect(ox + wx + 52, wy + wh - 14, 12, 18);
+  }
+}
+
 function drawHomeBg() {
   const tw = typeof HOME_TOTAL_W !== 'undefined' ? HOME_TOTAL_W : W;
+  const n = typeof HOME_ROOMS !== 'undefined' ? HOME_ROOMS : 1;
+  const themes =
+    typeof HOME_ROOM_THEMES !== 'undefined' && HOME_ROOM_THEMES.length
+      ? HOME_ROOM_THEMES
+      : [
+          {
+            wall: '#ffe8d0',
+            wallBand: '#f0dcc8',
+            floor: '#f5deb3',
+            floorStyle: 'wood',
+            baseboard: '#d4a87a',
+            windowX: 550,
+            windowW: 120,
+            windowH: 100,
+            windowTint: '#87CEEB',
+            frame: '#fff',
+            decor: 'none',
+          },
+        ];
+
   drawSkyBg(tw);
-  // Floor
-  ctx.fillStyle = '#f5deb3';
-  ctx.fillRect(0, H * 0.65, tw, H * 0.35);
-  // Wall
-  ctx.fillStyle = '#ffe8d0';
-  ctx.fillRect(0, H * 0.15, tw, H * 0.5);
-  // Baseboard
-  ctx.fillStyle = '#d4a87a';
-  ctx.fillRect(0, H * 0.63, tw, H * 0.04);
-  // Window in each room segment
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 4;
-  for (let seg = 0; seg < HOME_ROOMS; seg++) {
+
+  const floorY = H * 0.65;
+  const floorH = H * 0.35;
+  const wallY = H * 0.15;
+  const wallH = H * 0.5;
+
+  for (let seg = 0; seg < n; seg++) {
     const ox = seg * HOME_ROOM_W;
-    ctx.fillStyle = '#87CEEB';
-    drawRoundRect(ox + 550, H * 0.2, 120, 100, 8);
+    const th = themes[seg % themes.length];
+
+    if (seg > 0) {
+      const grd = ctx.createLinearGradient(ox, 0, ox + 10, 0);
+      grd.addColorStop(0, 'rgba(0,0,0,0.14)');
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(ox, wallY, 10, wallH + floorH + H * 0.02);
+    }
+
+    ctx.fillStyle = th.wallBand;
+    ctx.fillRect(ox, wallY, HOME_ROOM_W, H * 0.06);
+    ctx.fillStyle = th.wall;
+    ctx.fillRect(ox, wallY + H * 0.06, HOME_ROOM_W, wallH - H * 0.06);
+
+    ctx.fillStyle = th.floor;
+    ctx.fillRect(ox, floorY, HOME_ROOM_W, floorH);
+    drawHomeFloorPattern(ox, floorY, floorH, th);
+
+    ctx.fillStyle = th.baseboard;
+    ctx.fillRect(ox, H * 0.63, HOME_ROOM_W, H * 0.04);
+
+    const wx = ox + th.windowX;
+    const wy = H * 0.2;
+    const ww = th.windowW;
+    const wh = th.windowH;
+
+    if (th.decor === 'curtains') {
+      drawHomeRoomDecor(ox, th, wx - ox, wy, ww, wh);
+    }
+
+    ctx.fillStyle = th.windowTint;
+    drawRoundRect(wx, wy, ww, wh, 8);
     ctx.fill();
-    ctx.strokeRect(ox + 552, H * 0.2 + 2, 116, 96);
-    ctx.beginPath(); ctx.moveTo(ox + 610, H * 0.2); ctx.lineTo(ox + 610, H * 0.2 + 100); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ox + 550, H * 0.2 + 50); ctx.lineTo(ox + 670, H * 0.2 + 50); ctx.stroke();
+    ctx.strokeStyle = th.frame;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(wx + 2, wy + 2, ww - 4, wh - 4);
+    ctx.beginPath();
+    ctx.moveTo(wx + ww * 0.5, wy);
+    ctx.lineTo(wx + ww * 0.5, wy + wh);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(wx, wy + wh * 0.45);
+    ctx.lineTo(wx + ww, wy + wh * 0.45);
+    ctx.stroke();
+
+    if (th.decor !== 'curtains') {
+      drawHomeRoomDecor(ox, th, wx - ox, wy, ww, wh);
+    }
   }
 }
 
