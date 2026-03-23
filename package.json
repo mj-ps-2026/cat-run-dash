@@ -2,7 +2,8 @@
   "name": "cat-run-dash",
   "private": true,
   "scripts": {
-    "dev": "serve . -l 5173"
+    "dev": "serve . -l 5173",
+    "build": "echo 'Static site: no build step'"
   },
   "devDependencies": {
     "serve": "^14.2.4"
