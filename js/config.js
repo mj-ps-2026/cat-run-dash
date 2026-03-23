@@ -118,6 +118,7 @@ const STORE_ITEMS = [
   { id: 'painting_sky', cat: 'furniture', name: 'Sky Painting',    price: 9,  icon: '🖼️', desc: 'Dreamy clouds' },
   { id: 'couch',        cat: 'furniture', name: 'Cozy Couch',      price: 12, icon: '🛋️', desc: 'Sit or nap' },
   { id: 'couch_blue',   cat: 'furniture', name: 'Blue Couch',      price: 12, icon: '🛋️', desc: 'Cool comfort' },
+  { id: 'litterbox',    cat: 'furniture', name: 'Litter Box',      price: 0,  icon: '📦', desc: 'Keeps poops contained' },
 ];
 
 // Behavior emotes — chosen based on mood (paw fullness)
@@ -134,6 +135,7 @@ const BEHAVIOR_EMOTES_HAPPY = {
   grooming: ['✨', '💅', '😌'],
   watching: ['👀', '😲', '✨', '😸'],
   sniffing: ['👃', '🌿', '😊'],
+  pooping: ['😌', '💨', '✨'],
 };
 const BEHAVIOR_EMOTES_NEUTRAL = {
   idle: ['😐', '😶'],
@@ -148,6 +150,7 @@ const BEHAVIOR_EMOTES_NEUTRAL = {
   grooming: ['😐'],
   watching: ['👀', '❓'],
   sniffing: ['👃'],
+  pooping: ['😶', '💨'],
 };
 const BEHAVIOR_EMOTES_SAD = {
   idle: ['😿', '😢', '💔'],
@@ -162,6 +165,7 @@ const BEHAVIOR_EMOTES_SAD = {
   grooming: ['😿'],
   watching: ['😿', '😞'],
   sniffing: ['😿'],
+  pooping: ['😿', '💨'],
 };
 
 // Duration ranges per behavior (seconds)
@@ -178,6 +182,7 @@ const BEHAVIOR_DURATION = {
   grooming: [3, 5],
   watching: [3, 6],
   sniffing: [2, 3],
+  pooping: [2, 3.5],
 };
 
 // ============================================================
@@ -198,13 +203,14 @@ const FURNITURE_DEFAULTS = {
   nightlight: { x: 540, y: 278 }, nightlight_star: { x: 555, y: 278 },
   painting: { x: 375, y: 162 }, painting_sky: { x: 425, y: 162 },
   couch: { x: 320, y: 340 }, couch_blue: { x: 320, y: 340 },
+  litterbox: { x: 620, y: 392 },
 };
 
 // Map variant IDs to their base furniture type for behavior/hitbox purposes
 const FURNITURE_BASE = {};
 Object.keys(FURNITURE_DEFAULTS).forEach(id => {
   // Base type is the part before the last underscore variant, if it matches a known base
-  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch'];
+  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch','litterbox'];
   FURNITURE_BASE[id] = bases.find(b => id === b || id.startsWith(b + '_')) || id;
 });
 

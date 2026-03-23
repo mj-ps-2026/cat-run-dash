@@ -169,6 +169,24 @@ function drawCare() {
   // Draw owned furniture in the home
   drawFurniture();
 
+  // Floor poops (click to clean)
+  if (game.floorPoops && game.floorPoops.length > 0) {
+    game.floorPoops.forEach(fp => {
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💩', fp.x, fp.y + 6);
+      const hover = hitBox(mouse.x, mouse.y, fp.x - 18, fp.y - 18, 36, 36);
+      if (hover) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        drawRoundRect(fp.x - 22, fp.y - 24, 44, 20, 5);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px sans-serif';
+        ctx.fillText('Click to clean', fp.x, fp.y - 10);
+      }
+    });
+  }
+
   // Draw collected cats that are set to show in the house
   drawHouseCats();
 
@@ -438,7 +456,35 @@ function drawCare() {
     if (mouse.clicked && !game.dragging) {
       const inRoom = my > 70 && my < H - 90 && mx > 0 && mx < W - 150;
       if (inRoom && !onButton) {
-        if (game.careMode) {
+        let skipRoomInteract = false;
+        if (game.floorPoops && game.floorPoops.length > 0) {
+          for (let pi = game.floorPoops.length - 1; pi >= 0; pi--) {
+            const fp = game.floorPoops[pi];
+            if (Math.hypot(mx - fp.x, my - fp.y) < 28) {
+              game.floorPoops.splice(pi, 1);
+              sfxClick();
+              addFloat(fp.x, fp.y - 22, 'Cleaned!', '#6a6');
+              skipRoomInteract = true;
+              mouse.clicked = false;
+              break;
+            }
+          }
+        }
+        if (!skipRoomInteract && game.furniture.includes('litterbox') && (game.litterboxDirt || 0) > 0.02) {
+          const boxes = getFurnitureHitboxes();
+          const lb = boxes.find(b => b.dragId === 'litterbox');
+          if (lb && mx >= lb.x && mx <= lb.x + lb.w && my >= lb.y && my <= lb.y + lb.h) {
+            game.litterboxDirt = Math.max(0, game.litterboxDirt - 0.24);
+            sfxClick();
+            const lp = getFurnitureXY('litterbox');
+            addFloat(lp.x, lp.y - 44, game.litterboxDirt < 0.04 ? 'Fresh & clean!' : 'Scooping…', '#8a6');
+            skipRoomInteract = true;
+            mouse.clicked = false;
+          }
+        }
+        if (skipRoomInteract) {
+          /* handled */
+        } else if (game.careMode) {
           const ai = game.catAI;
           if (game.careMode === 'feed') {
             // Place food — bowl bonus if near a foodbowl
@@ -561,6 +607,22 @@ function drawCare() {
   ctx.font = 'bold 13px sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText(moodLabel, 20, 111);
+
+  // Poop / litter tips (rotate)
+  const poopTips = [
+    'After eating, cats need a bathroom break. A litter box keeps mess in one place.',
+    'Click floor poops or scoop the litter box when it looks dirty.',
+  ];
+  if (!game.isNight && game.currentCat !== null) {
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    drawRoundRect(10, 122, 280, 28, 6);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    const tipIdx = Math.floor(game.time * 0.12) % poopTips.length;
+    ctx.fillText('💡 ' + poopTips[tipIdx], 18, 141);
+  }
 
   // Interactive laser dot
   if (game.laserActive) {

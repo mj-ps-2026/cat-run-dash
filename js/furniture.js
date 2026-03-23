@@ -416,6 +416,29 @@ function drawFurniture() {
     ctx.fillStyle = '#ff9966'; drawEllipse(200, H * 0.615, 12, 4); ctx.fill();
     ctx.strokeStyle = '#6060aa'; ctx.lineWidth = 1.5; drawEllipse(200, H * 0.62, 16, 6); ctx.stroke();
   }); }
+  if (owned.includes('litterbox')) { withOffset('litterbox', () => {
+    const lx = 620, ly = 392;
+    const d = game.litterboxDirt || 0;
+    ctx.fillStyle = '#555';
+    drawRoundRect(lx - 28, ly - 10, 56, 40, 8);
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    drawRoundRect(lx - 28, ly - 10, 56, 40, 8);
+    ctx.stroke();
+    ctx.fillStyle = '#d4c4a8';
+    drawRoundRect(lx - 24, ly - 6, 48, 30, 5);
+    ctx.fill();
+    if (d > 0.02) {
+      ctx.fillStyle = `rgba(75, 50, 35, ${0.12 + d * 0.5})`;
+      drawRoundRect(lx - 22, ly - 4, 44, 24, 4);
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1;
+    drawRoundRect(lx - 24, ly - 6, 48, 30, 5);
+    ctx.stroke();
+  }); }
   if (owned.includes('fountain_gold')) { withOffset('fountain_gold', () => {
     const fx = 100, fy = H * 0.58;
     ctx.fillStyle = '#daa520'; drawEllipse(fx, fy, 18, 8); ctx.fill();

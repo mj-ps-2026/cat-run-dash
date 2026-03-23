@@ -194,12 +194,17 @@ function updateChase(dt) {
       dog.vx = dog.patrolDir * dog.speed * 0.4;
       dog.vy = 0;
       dog.facing = dog.patrolDir;
-      if (dog.x < 50 || dog.x > W - 50) dog.patrolDir *= -1;
     }
 
-    dog.x += dog.vx * dt;
+    const minDX = 20, maxDX = W - 20;
+    const nextX = dog.x + dog.vx * dt;
     dog.y += dog.vy * dt;
-    dog.x = Math.max(20, Math.min(W - 20, dog.x));
+    dog.x = Math.max(minDX, Math.min(maxDX, nextX));
+    // Bounce patrol only when movement would cross the wall (avoids flip every frame in 50..W-50 vs clamp 20..W-20)
+    if (!dog.aggro) {
+      if (nextX < minDX && dog.patrolDir < 0) dog.patrolDir = 1;
+      else if (nextX > maxDX && dog.patrolDir > 0) dog.patrolDir = -1;
+    }
 
     // Collision with player
     if (distToPlayer < 30) {

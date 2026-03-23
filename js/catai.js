@@ -94,6 +94,7 @@ function getFurnitureHitboxes() {
     { id: 'painting_sky', w: 58, h: 48, offy: -20, behavior: 'watching', label: 'Sky Painting' },
     { id: 'couch',       w: 100, h: 40, offy: -5, behavior: 'sitting', label: 'Cozy Couch' },
     { id: 'couch_blue',  w: 100, h: 40, offy: -5, behavior: 'sitting', label: 'Blue Couch' },
+    { id: 'litterbox',   w: 54, h: 42, offy: 2, behavior: 'sniffing', label: 'Litter Box' },
   ];
 
   defs.forEach(d => {
@@ -147,6 +148,20 @@ function getRandomSleepSpot() {
   return { x: pos.x, y: pos.y + (pick.startsWith('hammock') ? 30 : 0) };
 }
 
+function spawnCatPoop(ai) {
+  if (ai._poopInLitterbox && game.furniture.includes('litterbox')) {
+    const p = getFurnitureXY('litterbox');
+    game.litterboxDirt = Math.min(1, (game.litterboxDirt || 0) + 0.07);
+    addFloat(p.x, p.y - 36, '💩 In the box', '#7a5');
+  } else {
+    if (!game.floorPoops) game.floorPoops = [];
+    game._poopUid = (game._poopUid || 0) + 1;
+    game.floorPoops.push({ x: ai.x, y: ai.y + 10, id: game._poopUid });
+    addFloat(ai.x, ai.y - 38, '💩', '#654');
+  }
+  ai._poopInLitterbox = false;
+}
+
 function initCatAI() {
   const ai = game.catAI;
   ai.x = 300; ai.y = 340;
@@ -158,6 +173,8 @@ function initCatAI() {
   ai.facing = 1;
   ai.purring = false;
   ai.zzz = 0;
+  ai._poopCountPending = 0;
+  ai._poopInLitterbox = false;
 }
 
 function updateCatAI(dt) {
@@ -241,7 +258,13 @@ function updateCatAI(dt) {
         }
         ai._pendingCredit = null;
         ai._pendingCreditAmount = 1;
-        if (act === 'feed') game.placedFood = null;
+        if (act === 'feed') {
+          game.placedFood = null;
+          ai._poopCountPending = (ai._poopCountPending || 0) + 1;
+        }
+      }
+      if (ai.state === 'pooping') {
+        spawnCatPoop(ai);
       }
       pickNextBehavior(ai);
     }
@@ -259,6 +282,36 @@ function maybeEmote(ai) {
 }
 
 function pickNextBehavior(ai) {
+  if ((ai._poopCountPending | 0) > 0) {
+    ai._poopCountPending--;
+    const hasLitter = game.furniture.includes('litterbox');
+    ai._poopInLitterbox = hasLitter;
+    let tx, ty;
+    if (hasLitter) {
+      const p = getFurnitureXY('litterbox');
+      tx = p.x;
+      ty = Math.min(p.y + 10, H * 0.63);
+    } else {
+      tx = 100 + Math.random() * (W - 280);
+      ty = 285 + Math.random() * (H * 0.63 - 295);
+    }
+    ai.targetX = tx;
+    ai.targetY = ty;
+    ai._queuedBehavior = 'pooping';
+    const dist = Math.hypot(ai.targetX - ai.x, ai.targetY - ai.y);
+    if (dist > 15) {
+      ai.state = 'walking';
+      ai.stateTimer = 99;
+    } else {
+      const dur = BEHAVIOR_DURATION.pooping;
+      ai.state = 'pooping';
+      ai.stateTimer = dur[0] + Math.random() * (dur[1] - dur[0]);
+      maybeEmote(ai);
+    }
+    ai.nextStateTimer = ai.stateTimer + 0.5;
+    return;
+  }
+
   let spots = getFurnitureSpots();
   const sad = isCatSad();
 
@@ -371,6 +424,13 @@ function drawCatBehavior() {
     drawCat(ai.x + ai.facing * sniffBob, ai.y, game.currentCat, game.currentStage, ai.facing, game.time, false, isBlinking);
   } else if (ai.state === 'sitting') {
     drawCat(ai.x, ai.y + Math.sin(game.time * 1) * 1.5, game.currentCat, game.currentStage, ai.facing, game.time * 0.5, false, isBlinking);
+  } else if (ai.state === 'pooping') {
+    ctx.save();
+    ctx.translate(ai.x, ai.y);
+    ctx.scale(1.06, 0.86);
+    ctx.translate(-ai.x, -ai.y);
+    drawCat(ai.x, ai.y + 6 * s, game.currentCat, game.currentStage, ai.facing, game.time * 0.7, false, isBlinking);
+    ctx.restore();
   } else {
     drawCat(ai.x, ai.y, game.currentCat, game.currentStage, ai.facing, game.time, isWalking, isBlinking);
   }
@@ -422,7 +482,7 @@ function drawCatBehavior() {
     idle: '', sitting: 'sitting', walking: '', scratching: 'scratching!',
     drinking: 'drinking...', eating: 'eating...', sleeping: 'sleeping...',
     playing: 'playing!', looking: 'looking around', grooming: 'grooming',
-    watching: 'watching...', sniffing: 'sniffing',
+    watching: 'watching...', sniffing: 'sniffing', pooping: 'pooping...',
   };
   if (stateLabel[ai.state]) {
     ctx.fillText(stateLabel[ai.state], ai.x, ai.y + 30 * s);

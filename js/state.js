@@ -60,6 +60,8 @@ let game = {
   throwGrab: null,        // { toyIdx, startX, startY } while holding before throw
   careMode: null,         // active care interaction mode: 'feed'|'brush'|'play'|null
   placedFood: null,       // { x, y, inBowl } food placed on floor waiting for cat
+  floorPoops: [],         // { x, y, id } messes to click-clean (no litter box or missed)
+  litterboxDirt: 0,       // 0–1 fills slowly when cat uses litter box
   // Confetti
   confetti: [],
 };
@@ -72,7 +74,7 @@ function resetCare() {
 // SAVE / LOAD (localStorage)
 // ============================================================
 const SAVE_KEY = 'catRunDash_save';
-const SAVE_FIELDS = ['cats', 'currentCat', 'currentStage', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos'];
+const SAVE_FIELDS = ['cats', 'currentCat', 'currentStage', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt'];
 
 function saveGame() {
   try {
