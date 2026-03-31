@@ -419,7 +419,7 @@ function drawFurniture() {
   if (owned.includes('litterbox')) { withOffset('litterbox', () => {
     const lx = 620, ly = 392;
     const d = game.litterboxDirt || 0;
-    const clumps = game.litterboxClumps | 0;
+    const clumps = typeof getVisibleLitterClumps === 'function' ? getVisibleLitterClumps() : (game.litterboxClumps | 0);
     ctx.fillStyle = '#555';
     drawRoundRect(lx - 28, ly - 10, 56, 40, 8);
     ctx.fill();

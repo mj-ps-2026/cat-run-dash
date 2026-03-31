@@ -56,6 +56,15 @@ function getFurnitureSpots() {
 }
 
 // Clickable furniture/toy hitboxes for click-to-interact
+// Clumps visible in litter (dirt drops as you scrub; ~0.07 dirt per visit/clump)
+function getVisibleLitterClumps() {
+  const d = game.litterboxDirt || 0;
+  const c = game.litterboxClumps | 0;
+  if (d < 0.02) return 0;
+  const est = Math.ceil(d / 0.07);
+  return Math.min(c, Math.max(0, est));
+}
+
 function getFurnitureHitboxes() {
   const boxes = [];
   const owned = game.furniture;

@@ -28,6 +28,14 @@ function gameLoop(timestamp) {
       updateWalk(dt);
       drawWalk();
       break;
+    case 'backyard':
+      updateBackyard(dt);
+      drawBackyard();
+      break;
+    case 'timeout':
+      updateTimeout(dt);
+      drawTimeout();
+      break;
     case 'chase':
       updateChase(dt);
       drawChase();

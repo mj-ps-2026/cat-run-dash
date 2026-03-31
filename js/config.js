@@ -8,6 +8,16 @@ const HOME_ROOM_W = 800;
 const HOME_ROOMS = 3;
 const HOME_TOTAL_W = HOME_ROOM_W * HOME_ROOMS;
 
+// Backyard egg hunt: time-limited (Easter season). Uses local date.
+function isEggHuntEventActive() {
+  const now = new Date();
+  const m = now.getMonth();
+  const day = now.getDate();
+  if (m === 2) return true; // March (Easter season)
+  if (m === 3 && day <= 25) return true; // through April 25
+  return false;
+}
+
 // Visual theme per scroll segment (care home). Used by drawSkyBg / drawHomeBg.
 const HOME_ROOM_THEMES = [
   {

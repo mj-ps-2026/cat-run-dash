@@ -54,6 +54,35 @@ function updateCare(dt) {
     if (keys['ArrowRight']) game.homeScrollX = Math.min(maxS, (game.homeScrollX || 0) + 280 * dt);
   }
 
+  // Litter scrub: drag inside tray surface to reduce dirt (clumps follow dirt)
+  if (game.screen === 'care' && game.furniture.includes('litterbox')) {
+    const d0 = game.litterboxDirt || 0;
+    const sx = game.homeScrollX || 0;
+    const wx = mouse.x + sx;
+    const my = mouse.y;
+    const lp = getFurnitureXY('litterbox');
+    const tx = lp.x - 22, ty = lp.y - 4, tw = 44, th = 26;
+    const inTray = wx >= tx && wx <= tx + tw && my >= ty && my <= ty + th;
+    if (d0 > 0.02 && inTray && mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
+      if (!game.litterScrub) game.litterScrub = { lx: wx, ly: my };
+      else {
+        const dist = Math.hypot(wx - game.litterScrub.lx, my - game.litterScrub.ly);
+        if (dist > 0) {
+          game.litterboxDirt = Math.max(0, game.litterboxDirt - dist * 0.00115);
+          game.litterboxClumps = getVisibleLitterClumps();
+          game.litterScrub.lx = wx;
+          game.litterScrub.ly = my;
+        }
+      }
+      if (game.litterboxDirt < 0.028) {
+        game.litterboxDirt = 0;
+        game.litterboxClumps = 0;
+      }
+    } else if (!mouse.down) {
+      game.litterScrub = null;
+    }
+  }
+
   // Throwable grab — keep aim in world space (same frame as AI chase)
   if (game.throwGrab && mouse.down && game.screen === 'care') {
     const hsx = game.homeScrollX || 0;
@@ -188,6 +217,23 @@ function drawCare() {
   ctx.translate(-sx, 0);
   drawHomeBg();
   drawFurniture();
+
+  // Backyard door (living room, left wall)
+  ctx.fillStyle = '#4a6a40';
+  drawRoundRect(6, H * 0.29, 66, H * 0.46, 10);
+  ctx.fill();
+  ctx.strokeStyle = '#2a4020';
+  ctx.lineWidth = 3;
+  drawRoundRect(6, H * 0.29, 66, H * 0.46, 10);
+  ctx.stroke();
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(58, H * 0.54, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Backyard', 39, H * 0.36);
 
   // Floor poops (click to clean)
   if (game.floorPoops && game.floorPoops.length > 0) {
@@ -337,6 +383,13 @@ function drawCare() {
     game.screen = 'store';
   }
 
+  drawButton(10, 130, 125, 36, 'Chill zone', '#8a7', true, '🌿');
+  if (mouse.clicked && hitBox(mouse.x, mouse.y, 10, 130, 125, 36)) {
+    sfxClick();
+    initTimeout();
+    game.screen = 'timeout';
+  }
+
   // Activity buttons
   const btnW = 105, btnH = 55;
   const btnY = H - 85;
@@ -443,7 +496,18 @@ function drawCare() {
 
   // Drag furniture or click-to-interact (wx = screen X + scroll, world space)
   if (game.screen === 'care') {
-    const onButton = hitBox(mx, my, 10, 10, 110, 110) || hitBox(mx, my, W - 120, 10, 110, 35);
+    const onButton = hitBox(mx, my, 10, 10, 110, 110) || hitBox(mx, my, W - 120, 10, 110, 35)
+      || hitBox(mx, my, 10, 130, 125, 36);
+
+    if (mouse.clicked && !onButton) {
+      const doorX = 6, doorY = H * 0.29, doorW = 66, doorH = H * 0.46;
+      if (wx >= doorX && wx <= doorX + doorW && my >= doorY && my <= doorY + doorH) {
+        sfxClick();
+        initBackyard();
+        game.screen = 'backyard';
+        mouse.clicked = false;
+      }
+    }
 
     // Handle drag in progress
     if (game.dragging && mouse.down) {
@@ -471,6 +535,12 @@ function drawCare() {
       const boxes = getFurnitureHitboxes();
       for (const box of boxes) {
         if (box.dragId && wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h && !onButton) {
+          if (box.dragId === 'litterbox') {
+            const lp = getFurnitureXY('litterbox');
+            const trx = lp.x - 22, ty = lp.y - 4, tw = 44, th = 26;
+            const inTray = wx >= trx && wx <= trx + tw && my >= ty && my <= ty + th;
+            if ((game.litterboxDirt || 0) > 0.02 && inTray) break;
+          }
           // Laser toy
           if (box.label === 'Laser') {
             game.laserActive = true;
@@ -530,19 +600,6 @@ function drawCare() {
               mouse.clicked = false;
               break;
             }
-          }
-        }
-        if (!skipRoomInteract && game.furniture.includes('litterbox') && (game.litterboxDirt || 0) > 0.02) {
-          const boxes = getFurnitureHitboxes();
-          const lb = boxes.find(b => b.dragId === 'litterbox');
-          if (lb && wx >= lb.x && wx <= lb.x + lb.w && my >= lb.y && my <= lb.y + lb.h) {
-            game.litterboxDirt = Math.max(0, game.litterboxDirt - 0.24);
-            game.litterboxClumps = game.litterboxDirt < 0.04 ? 0 : Math.max(0, (game.litterboxClumps || 0) - 1);
-            sfxClick();
-            const lp = getFurnitureXY('litterbox');
-            addFloat(lp.x, lp.y - 44, game.litterboxDirt < 0.04 ? 'Fresh & clean!' : 'Scooping…', '#8a6');
-            skipRoomInteract = true;
-            mouse.clicked = false;
           }
         }
         if (skipRoomInteract) {
@@ -640,12 +697,15 @@ function drawCare() {
       const beingDragged = game.dragging && game.dragging.id === box.dragId;
       if (hovering && !beingDragged) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        drawRoundRect(mx - 40, my - 22, 80, 18, 5);
+        drawRoundRect(mx - 52, my - 22, 104, 18, 5);
         ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${box.label} (drag)`, mx, my - 9);
+        const tip = box.dragId === 'litterbox' && (game.litterboxDirt || 0) > 0.02
+          ? 'Scrub litter (drag)'
+          : `${box.label} (drag)`;
+        ctx.fillText(tip, mx, my - 9);
         break;
       }
     }
@@ -666,7 +726,7 @@ function drawCare() {
   // Poop / litter tips (rotate)
   const poopTips = [
     'After eating, cats need a bathroom break. A litter box keeps mess in one place.',
-    'You will see clumps in the litter after a visit — scoop anytime, even if it is not full yet.',
+    'Clumps appear after a litter visit — scrub inside the box to clean (drag back & forth).',
   ];
   if (!game.isNight && game.currentCat !== null) {
     ctx.fillStyle = 'rgba(0,0,0,0.35)';

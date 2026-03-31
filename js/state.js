@@ -5,7 +5,7 @@
 // ============================================================
 
 let game = {
-  screen: 'title', // title, select, care, walk, chase, result
+  screen: 'title', // title, select, care, walk, chase, backyard, timeout, store, collection
   time: 0,
   cats: [], // { breed: index, stage: 3 } completed cats
   currentCat: null, // breed index
@@ -64,8 +64,18 @@ let game = {
   litterboxDirt: 0,       // 0–1 fills slowly when cat uses litter box
   litterboxClumps: 0,     // visible deposits (increments each use; scooping reduces)
   homeScrollX: 0,       // care screen horizontal scroll (0 .. HOME_TOTAL_W - W)
+  litterScrub: null,    // { lx, ly } world coords while scrubbing litter tray
   // Confetti
   confetti: [],
+  // Backyard (door from care) + optional egg hunt
+  backyard: {
+    px: 400, py: 320, targetX: 400, targetY: 320,
+    eggs: [], // { x, y, collected }
+    eggHuntComplete: false,
+  },
+  eggHuntRewardClaimed: false, // one-time reward when all eggs found during event
+  // Chill zone (playful time-out screen)
+  timeout: { timer: 0 },
 };
 
 function resetCare() {
@@ -76,7 +86,7 @@ function resetCare() {
 // SAVE / LOAD (localStorage)
 // ============================================================
 const SAVE_KEY = 'catRunDash_save';
-const SAVE_FIELDS = ['cats', 'currentCat', 'currentStage', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX'];
+const SAVE_FIELDS = ['cats', 'currentCat', 'currentStage', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX', 'eggHuntRewardClaimed'];
 
 function saveGame() {
   try {
@@ -84,7 +94,7 @@ function saveGame() {
     SAVE_FIELDS.forEach(k => { data[k] = game[k]; });
     data.screen = game.screen;
     // Don't save mid-chase or mid-walk — save as care screen
-    if (data.screen === 'walk' || data.screen === 'chase') data.screen = 'care';
+    if (data.screen === 'walk' || data.screen === 'chase' || data.screen === 'backyard' || data.screen === 'timeout') data.screen = 'care';
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch (e) { /* storage full or unavailable — silently ignore */ }
 }
@@ -97,6 +107,7 @@ function loadGame() {
     SAVE_FIELDS.forEach(k => {
       if (data[k] !== undefined) game[k] = data[k];
     });
+    if (data.eggHuntRewardClaimed === undefined) game.eggHuntRewardClaimed = false;
     // Restore screen (default to care if a cat exists, else title)
     if (data.screen === 'care' || data.screen === 'store' || data.screen === 'collection') {
       game.screen = data.screen;
