@@ -76,6 +76,10 @@ const HOME_ROOM_THEMES = [
 // ============================================================
 // CAT DEFINITIONS
 // ============================================================
+const NUM_BASE_CAT_BREEDS = 6;
+const MOD_PACK_CODE = 'CORAROCKS';
+const MOD_PRICE_MULT = 0.75;
+
 const CAT_BREEDS = [
   { name: 'Marmalade', bodyColor: '#f4a442', stripeColor: '#d4812a', earInner: '#ffb8d0', eyeColor: '#4a2' },
   { name: 'Shadow', bodyColor: '#2a2a2a', stripeColor: '#1a1a1a', earInner: '#444', eyeColor: '#6c6' },
@@ -83,6 +87,8 @@ const CAT_BREEDS = [
   { name: 'Smokey', bodyColor: '#7a7a8a', stripeColor: '#5a5a6a', earInner: '#a0a0b0', eyeColor: '#fa0' },
   { name: 'Patches', bodyColor: '#f4a442', stripeColor: '#2a2a2a', earInner: '#ffb8d0', eyeColor: '#4a2', calico: true },
   { name: 'Tux', bodyColor: '#2a2a2a', stripeColor: '#f0eee8', earInner: '#444', eyeColor: '#48f', tuxedo: true },
+  { name: 'Circus Star', bodyColor: '#f0e8ff', stripeColor: '#c8a0e8', earInner: '#ffb8f0', eyeColor: '#a4f', secret: true, sparkle: true },
+  { name: 'Galaxy', bodyColor: '#1a1a2e', stripeColor: '#4a3a6e', earInner: '#88c', eyeColor: '#8ff', secret: true, sparkle: true },
 ];
 
 const STAGES = ['Baby', 'Kitten', 'Teen', 'Adult'];
@@ -113,6 +119,7 @@ const STORE_ITEMS = [
   { id: 'shrimp',       cat: 'food', name: 'Shrimp',        price: 8,  icon: '🦐', desc: '+3 Feed',   effect: { act: 'feed', amount: 3 } },
   { id: 'fancyfeast',   cat: 'food', name: 'Fancy Feast',   price: 12, icon: '🍖', desc: '+5 Feed',   effect: { act: 'feed', amount: 5 } },
   { id: 'cake',         cat: 'food', name: 'Cat Cake',      price: 15, icon: '🎂', desc: '+5 Feed',   effect: { act: 'feed', amount: 5 } },
+  { id: 'grow_boost',   cat: 'food', name: 'Growth Elixir', price: 40, icon: '✨', desc: 'Advance stage (once)', vipOnly: true, growBoost: true },
   // ── Toys (consumable — auto-plays) ──
   { id: 'yarn',         cat: 'toys', name: 'Yarn Ball',     price: 0,  icon: '🧶', desc: '+1 Play',   effect: { act: 'play', amount: 1 } },
   { id: 'bell',         cat: 'toys', name: 'Jingle Bell',   price: 3,  icon: '🔔', desc: '+1 Play',   effect: { act: 'play', amount: 1 } },
@@ -144,6 +151,7 @@ const STORE_ITEMS = [
   { id: 'collar_red',   cat: 'accessories', name: 'Red Collar',    price: 0,  icon: '🔴', desc: 'Stylish collar',    slot: 'neck' },
   { id: 'collar_gold',  cat: 'accessories', name: 'Gold Collar',   price: 8,  icon: '💛', desc: 'Fancy collar',      slot: 'neck' },
   { id: 'collar_purple',cat: 'accessories', name: 'Purple Collar', price: 6,  icon: '💜', desc: 'Elegant collar',    slot: 'neck' },
+  { id: 'collar_vip',   cat: 'accessories', name: 'Star Collar',   price: 18, icon: '💫', desc: 'Supporter sparkle', slot: 'neck', vipOnly: true },
   { id: 'bowtie',       cat: 'accessories', name: 'Bowtie',        price: 7,  icon: '🎀', desc: 'Formal & cute',     slot: 'neck' },
   { id: 'bell_collar',  cat: 'accessories', name: 'Bell Collar',   price: 6,  icon: '🔔', desc: 'Jingle jingle',     slot: 'neck' },
   { id: 'flower_lei',   cat: 'accessories', name: 'Flower Lei',    price: 9,  icon: '🌸', desc: 'Tropical cat',      slot: 'neck' },
@@ -189,6 +197,7 @@ const STORE_ITEMS = [
   { id: 'couch',        cat: 'furniture', name: 'Cozy Couch',      price: 12, icon: '🛋️', desc: 'Sit or nap' },
   { id: 'couch_blue',   cat: 'furniture', name: 'Blue Couch',      price: 12, icon: '🛋️', desc: 'Cool comfort' },
   { id: 'litterbox',    cat: 'furniture', name: 'Litter Box',      price: 0,  icon: '📦', desc: 'Keeps poops contained' },
+  { id: 'cat_tunnel',   cat: 'furniture', name: 'Cat Tunnel',      price: 14, icon: '🌀', desc: 'Peek & zoom' },
 ];
 
 // Behavior emotes — chosen based on mood (paw fullness)
@@ -206,6 +215,7 @@ const BEHAVIOR_EMOTES_HAPPY = {
   watching: ['👀', '😲', '✨', '😸'],
   sniffing: ['👃', '🌿', '😊'],
   pooping: ['😌', '💨', '✨'],
+  tunneling: ['😸', '👀', '✨'],
 };
 const BEHAVIOR_EMOTES_NEUTRAL = {
   idle: ['😐', '😶'],
@@ -221,6 +231,7 @@ const BEHAVIOR_EMOTES_NEUTRAL = {
   watching: ['👀', '❓'],
   sniffing: ['👃'],
   pooping: ['😶', '💨'],
+  tunneling: ['😐', '👀'],
 };
 const BEHAVIOR_EMOTES_SAD = {
   idle: ['😿', '😢', '💔'],
@@ -236,6 +247,7 @@ const BEHAVIOR_EMOTES_SAD = {
   watching: ['😿', '😞'],
   sniffing: ['😿'],
   pooping: ['😿', '💨'],
+  tunneling: ['😿', '👀'],
 };
 
 // Duration ranges per behavior (seconds)
@@ -253,6 +265,7 @@ const BEHAVIOR_DURATION = {
   watching: [3, 6],
   sniffing: [2, 3],
   pooping: [2, 3.5],
+  tunneling: [3, 6],
 };
 
 // ============================================================
@@ -274,13 +287,14 @@ const FURNITURE_DEFAULTS = {
   painting: { x: 375, y: 162 }, painting_sky: { x: 425, y: 162 },
   couch: { x: 320, y: 340 }, couch_blue: { x: 320, y: 340 },
   litterbox: { x: 620, y: 392 },
+  cat_tunnel: { x: HOME_ROOM_W + 380, y: 368 },
 };
 
 // Map variant IDs to their base furniture type for behavior/hitbox purposes
 const FURNITURE_BASE = {};
 Object.keys(FURNITURE_DEFAULTS).forEach(id => {
   // Base type is the part before the last underscore variant, if it matches a known base
-  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch','litterbox'];
+  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch','litterbox','cat_tunnel'];
   FURNITURE_BASE[id] = bases.find(b => id === b || id.startsWith(b + '_')) || id;
 });
 

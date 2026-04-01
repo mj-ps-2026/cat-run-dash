@@ -76,10 +76,13 @@ const BG_THEMES = (() => {
   const selectBass= ['C3','—','—','—', 'G3','—','—','—', 'C3','—','—','—', 'G3','—','—','—', 'C3','—','—','—', 'A3','—','—','—', 'G3','—','—','—', '—','—','—','—'];
   const collMel = ['G4','—','E4','G4', 'A4','—','—','—', 'E4','G4','A4','—', 'G4','E4','D4','—', '—','—','—','—', 'A4','G4','E4','—', 'G4','—','D4','—', '—','—','—','—'];
   const collBass= ['C3','—','—','—', 'G3','—','—','—', 'A3','—','—','—', 'G3','—','—','—', 'C3','—','—','—', 'G3','—','—','—', 'A3','—','—','—', 'G3','—','—','—'];
+  const calmMel = ['E4','—','G4','—', 'A4','—','G4','E4', 'D4','—','E4','—', 'G4','—','—','—', 'C4','—','E4','G4', 'A4','—','G4','—', 'E4','—','D4','—', 'C4','—','—','—'];
+  const calmBass= ['C3','—','—','—', 'G3','—','—','—', 'A3','—','—','—', 'G3','—','D3','—', 'C3','—','—','—', 'G3','—','—','—', 'E3','—','—','—', 'G3','—','—','—'];
   return {
     title:   T(88,  titleMel,  titleBass),
     select:  T(96,  selectMel, selectBass),
     care:    T(100, careMel,   careBass),
+    care_calm: T(78, calmMel, calmBass),
     walk:    T(108, walkMel,   walkBass),
     chase:   T(128, chaseMel,  chaseBass),
     store:   T(112, storeMel,  storeBass),
@@ -105,7 +108,9 @@ function playMusicNote(freq, dur, vol, type) {
 }
 
 function setBgMusicTheme(screen) {
-  const s = screen || game.screen;
+  let s = screen || game.screen;
+  if (s === 'care' && typeof game !== 'undefined' && game.careMusicCalm) s = 'care_calm';
+  if (s === 'timeout' && typeof game !== 'undefined' && game.careMusicCalm) s = 'care_calm';
   if (!BG_THEMES[s] || bgMusic.theme === s) return;
   bgMusic.theme = s;
   bgMusic.beat = 0;
@@ -157,4 +162,17 @@ function stopBgMusic() {
 function toggleBgMusic() {
   bgMusic.enabled = !bgMusic.enabled;
   if (bgMusic.enabled) { startBgMusic(); } else { stopBgMusic(); }
+}
+
+function applyCareMusicTheme() {
+  if (game.screen !== 'care' && game.screen !== 'timeout') return;
+  const want = game.careMusicCalm ? 'care_calm' : 'care';
+  if (bgMusic.theme === want) return;
+  bgMusic.theme = want;
+  bgMusic.beat = 0;
+  if (bgMusic.playing && bgMusic.interval) {
+    clearInterval(bgMusic.interval);
+    const th = BG_THEMES[want];
+    bgMusic.interval = setInterval(runBgMusicBeat, th.msPerBeat);
+  }
 }

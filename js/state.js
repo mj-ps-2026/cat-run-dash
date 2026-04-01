@@ -74,19 +74,35 @@ let game = {
     eggHuntComplete: false,
   },
   eggHuntRewardClaimed: false, // one-time reward when all eggs found during event
+  // Supporter mod pack (password unlock)
+  modPackUnlocked: false,
+  growBoostUsed: false,
+  petCooldown: 0,
+  careHintUntil: 0,
+  careHintText: '',
+  careMusicCalm: false,
   // Chill zone (playful time-out screen)
-  timeout: { timer: 0 },
+  timeout: { timer: 0, savedScroll: 0 },
 };
 
 function resetCare() {
   game.care = { feed: 0, play: 0, brush: 0, water: 0, walk: 0, gather: 0 };
 }
 
+function hasUnlockedSecretBreeds() {
+  if (!game.cats || game.cats.length < NUM_BASE_CAT_BREEDS) return false;
+  const breeds = new Set(game.cats.map(c => c.breed));
+  for (let b = 0; b < NUM_BASE_CAT_BREEDS; b++) {
+    if (!breeds.has(b)) return false;
+  }
+  return true;
+}
+
 // ============================================================
 // SAVE / LOAD (localStorage)
 // ============================================================
 const SAVE_KEY = 'catRunDash_save';
-const SAVE_FIELDS = ['cats', 'currentCat', 'currentStage', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX', 'eggHuntRewardClaimed'];
+const SAVE_FIELDS = ['cats', 'currentCat', 'currentStage', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX', 'eggHuntRewardClaimed', 'modPackUnlocked', 'growBoostUsed'];
 
 function saveGame() {
   try {
@@ -94,7 +110,7 @@ function saveGame() {
     SAVE_FIELDS.forEach(k => { data[k] = game[k]; });
     data.screen = game.screen;
     // Don't save mid-chase or mid-walk — save as care screen
-    if (data.screen === 'walk' || data.screen === 'chase' || data.screen === 'backyard' || data.screen === 'timeout') data.screen = 'care';
+    if (data.screen === 'walk' || data.screen === 'chase' || data.screen === 'backyard' || data.screen === 'timeout' || data.screen === 'dressing') data.screen = 'care';
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch (e) { /* storage full or unavailable — silently ignore */ }
 }
@@ -108,8 +124,10 @@ function loadGame() {
       if (data[k] !== undefined) game[k] = data[k];
     });
     if (data.eggHuntRewardClaimed === undefined) game.eggHuntRewardClaimed = false;
+    if (data.modPackUnlocked === undefined) game.modPackUnlocked = false;
+    if (data.growBoostUsed === undefined) game.growBoostUsed = false;
     // Restore screen (default to care if a cat exists, else title)
-    if (data.screen === 'care' || data.screen === 'store' || data.screen === 'collection') {
+    if (data.screen === 'care' || data.screen === 'store' || data.screen === 'collection' || data.screen === 'dressing') {
       game.screen = data.screen;
     } else if (game.currentCat !== null) {
       game.screen = 'care';

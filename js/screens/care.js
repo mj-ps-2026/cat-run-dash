@@ -203,8 +203,15 @@ function updateCare(dt) {
     return c.life > 0;
   });
 
+  if ((game.petCooldown || 0) > 0) game.petCooldown -= dt;
+
   updateCatAI(dt);
   updateHouseCats(dt);
+
+  if (game.careHintUntil && game.time >= game.careHintUntil) {
+    game.careHintText = '';
+    game.careHintUntil = 0;
+  }
 }
 
 function drawCare() {
@@ -234,6 +241,24 @@ function drawCare() {
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Backyard', 39, H * 0.36);
+
+  // Dressing room door (bedroom — segment 1, right side)
+  const dressX = HOME_ROOM_W * 2 - 64;
+  ctx.fillStyle = '#6a5a8a';
+  drawRoundRect(dressX, H * 0.30, 56, H * 0.42, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#4a3a60';
+  ctx.lineWidth = 2;
+  drawRoundRect(dressX, H * 0.30, 56, H * 0.42, 8);
+  ctx.stroke();
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(dressX + 44, H * 0.52, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Dress', dressX + 28, H * 0.36);
 
   // Floor poops (click to clean)
   if (game.floorPoops && game.floorPoops.length > 0) {
@@ -372,6 +397,13 @@ function drawCare() {
     toggleBgMusic();
     sfxClick();
   }
+  const calmLabel = game.careMusicCalm ? 'Calm ✓' : 'Calm';
+  drawButton(165, 10, 72, 32, calmLabel, game.careMusicCalm ? '#5a8' : '#556', true);
+  if (mouse.clicked && hitBox(mouse.x, mouse.y, 165, 10, 72, 32)) {
+    game.careMusicCalm = !game.careMusicCalm;
+    applyCareMusicTheme();
+    sfxClick();
+  }
 
   // Store button (top left, below money)
   drawButton(10, 50, 110, 38, 'Store', '#e07050', true, '🏪');
@@ -415,6 +447,8 @@ function drawCare() {
     if (mouse.clicked && hitBox(mouse.x, mouse.y, bx, btnY, btnW, btnH) && !done) {
       if (game.careMode === act) {
         game.careMode = null;
+        game.careHintText = 'Mode off';
+        game.careHintUntil = game.time + 2.5;
         sfxClick();
         continue;
       }
@@ -429,6 +463,8 @@ function drawCare() {
           addFloat(catX, catY - 60, 'Cat is sleeping! 😴', '#f87');
         } else {
           game.careMode = 'feed';
+          game.careHintText = 'Place food on the floor (tap below)';
+          game.careHintUntil = game.time + 5;
           addFloat(catX, catY - 60, 'Click the floor to place food!', '#f87');
         }
       } else if (act === 'water') {
@@ -458,6 +494,8 @@ function drawCare() {
           addFloat(catX, catY - 60, 'Cat is sleeping! 😴', '#b8f');
         } else {
           game.careMode = 'brush';
+          game.careHintText = 'Brush: tap your cat';
+          game.careHintUntil = game.time + 5;
           addFloat(catX, catY - 60, 'Click on your cat to brush!', '#b8f');
         }
       } else if (act === 'play') {
@@ -496,7 +534,7 @@ function drawCare() {
 
   // Drag furniture or click-to-interact (wx = screen X + scroll, world space)
   if (game.screen === 'care') {
-    const onButton = hitBox(mx, my, 10, 10, 110, 110) || hitBox(mx, my, W - 120, 10, 110, 35)
+    const onButton = hitBox(mx, my, 10, 10, 250, 110) || hitBox(mx, my, W - 120, 10, 110, 35)
       || hitBox(mx, my, 10, 130, 125, 36);
 
     if (mouse.clicked && !onButton) {
@@ -505,6 +543,13 @@ function drawCare() {
         sfxClick();
         initBackyard();
         game.screen = 'backyard';
+        mouse.clicked = false;
+      }
+      const dressX = HOME_ROOM_W * 2 - 64, dressY = H * 0.30, dressW = 56, dressH = H * 0.42;
+      if (wx >= dressX && wx <= dressX + dressW && my >= dressY && my <= dressY + dressH) {
+        sfxClick();
+        game.careMode = null;
+        game.screen = 'dressing';
         mouse.clicked = false;
       }
     }
@@ -660,6 +705,20 @@ function drawCare() {
           game.catAI.emote = { icon: '😿', timer: 1.5 };
         } else {
           const ai = game.catAI;
+          const distToCat = Math.hypot(wx - ai.x, my - ai.y);
+          if (distToCat < 52 && (game.petCooldown || 0) <= 0 && !game.isNight && ai.state !== 'sleeping') {
+            game.petCooldown = 2.8;
+            ai.emote = { icon: '💕', timer: 2 };
+            sfxMeow();
+            addFloat(ai.x, ai.y - 48, 'Purrr~', '#f9a');
+            game.careHintText = 'Nice pets help mood!';
+            game.careHintUntil = game.time + 3;
+            if (game.care.play < MAX_PER_ACTIVITY) {
+              game.care.play = Math.min(MAX_PER_ACTIVITY, game.care.play + 1);
+              checkGrowth();
+            }
+            mouse.clicked = false;
+          } else {
           const boxes = getFurnitureHitboxes();
           let clickedItem = null;
           for (const box of boxes) {
@@ -683,6 +742,7 @@ function drawCare() {
             ai.state = 'walking';
             ai.stateTimer = 99;
             ai.nextStateTimer = 5;
+          }
           }
         }
       }
@@ -723,26 +783,21 @@ function drawCare() {
   ctx.textAlign = 'left';
   ctx.fillText(moodLabel, 20, 111);
 
-  // Poop / litter tips (rotate)
-  const poopTips = [
-    'After eating, cats need a bathroom break. A litter box keeps mess in one place.',
-    'Clumps appear after a litter visit — scrub inside the box to clean (drag back & forth).',
-  ];
-  if (!game.isNight && game.currentCat !== null) {
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    drawRoundRect(10, 122, 280, 28, 6);
+  const btnYHint = H - 85;
+  if (game.careHintText && (game.careHintUntil || 0) > game.time) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    drawRoundRect(12, btnYHint - 28, W - 24, 22, 6);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillStyle = '#fff';
     ctx.font = '11px sans-serif';
-    ctx.textAlign = 'left';
-    const tipIdx = Math.floor(game.time * 0.12) % poopTips.length;
-    ctx.fillText('💡 ' + poopTips[tipIdx], 18, 141);
+    ctx.textAlign = 'center';
+    ctx.fillText(game.careHintText, W / 2, btnYHint - 12);
   }
 
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.font = '11px sans-serif';
+  ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('← → keys or scroll wheel to move through the house', W / 2, H - 18);
+  ctx.fillText('← → scroll the house · Wheel / trackpad', W / 2, H - 14);
 
   // Interactive laser dot (world → screen)
   if (game.laserActive) {
@@ -827,8 +882,36 @@ function checkGrowth() {
 }
 
 function buyItem(item) {
-  game.money -= item.price;
+  const price = typeof getStorePrice === 'function' ? getStorePrice(item) : item.price;
+  if (item.growBoost && game.growBoostUsed) return;
+  if (item.growBoost && game.currentStage >= 3) {
+    sfxNope();
+    addFloat(400, 200, 'Already fully grown!', '#888', { screen: true });
+    return;
+  }
+  if (game.money < price) return;
+  game.money -= price;
   sfxBuy();
+
+  if (item.growBoost) {
+    game.growBoostUsed = true;
+    game.currentStage++;
+    resetCare();
+    sfxGrow();
+    spawnConfetti(game.catAI.x, game.catAI.y - 30, 60);
+    addFloat(400, 200, `Now a ${STAGES[game.currentStage]}!`, '#fa0', { screen: true });
+    if (game.currentStage === 3) {
+      setTimeout(() => {
+        addFloat(300, 200, 'Time to run home!', '#f44', { screen: true });
+        setTimeout(() => {
+          initChase();
+          game.screen = 'chase';
+        }, 1500);
+      }, 800);
+    }
+    checkGrowth();
+    return;
+  }
 
   if (item.cat === 'food') {
     // Food: consumable, apply feed + show in home
@@ -850,13 +933,15 @@ function buyItem(item) {
     if (game.care.play >= MAX_PER_ACTIVITY) setTimeout(() => sfxComplete(), 200);
     checkGrowth();
   } else if (item.cat === 'accessories') {
-    // Accessories: add to inventory AND auto-equip
     if (!game.inventory.includes(item.id)) game.inventory.push(item.id);
-    game.equipped[item.slot] = item.id;
-    sfxEquip();
-    addFloat(400, 200, `${item.name} equipped!`, '#b8f', { screen: true });
+    addFloat(400, 200, `${item.name} — equip in dressing room`, '#b8f', { screen: true });
   } else if (item.cat === 'furniture') {
     if (!game.furniture.includes(item.id)) game.furniture.push(item.id);
+    if (!game.furniturePos[item.id] && typeof getNextFurnitureSpreadPosition === 'function') {
+      game.furniturePos[item.id] = getNextFurnitureSpreadPosition();
+    }
+    const pos = game.furniturePos[item.id] || { x: 300, y: 350 };
+    game.homeScrollX = Math.max(0, Math.min(HOME_TOTAL_W - W, pos.x - W * 0.35));
     addFloat(400, 200, `${item.name} placed at home!`, '#8d6', { screen: true });
   }
 }

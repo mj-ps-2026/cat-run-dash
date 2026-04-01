@@ -36,6 +36,9 @@ function gameLoop(timestamp) {
       updateTimeout(dt);
       drawTimeout();
       break;
+    case 'dressing':
+      drawDressing();
+      break;
     case 'chase':
       updateChase(dt);
       drawChase();

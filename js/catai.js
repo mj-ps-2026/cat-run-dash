@@ -47,6 +47,7 @@ function getFurnitureSpots() {
   if (owned.includes('painting_sky'))    { const p = fp('painting_sky'); spots.push({ x: p.x, y: py20('painting_sky'), behavior: 'watching', weight: 3 }); }
   if (owned.includes('couch'))          { const p = fp('couch'); spots.push({ x: p.x, y: p.y, behavior: 'sitting', weight: 3 }, { x: p.x, y: p.y, behavior: 'sleeping', weight: 2 }); }
   if (owned.includes('couch_blue'))     { const p = fp('couch_blue'); spots.push({ x: p.x, y: p.y, behavior: 'sitting', weight: 3 }, { x: p.x, y: p.y, behavior: 'sleeping', weight: 2 }); }
+  if (owned.includes('cat_tunnel'))     { const p = fp('cat_tunnel'); spots.push({ x: p.x, y: Math.min(p.y + 8, H * 0.63), behavior: 'tunneling', weight: 3 }); }
   // Toys on the floor — positions are dynamic
   game.ownedToys.forEach((toyId, i) => {
     const tp = getToyXY(i);
@@ -104,6 +105,7 @@ function getFurnitureHitboxes() {
     { id: 'couch',       w: 100, h: 40, offy: -5, behavior: 'sitting', label: 'Cozy Couch' },
     { id: 'couch_blue',  w: 100, h: 40, offy: -5, behavior: 'sitting', label: 'Blue Couch' },
     { id: 'litterbox',   w: 54, h: 42, offy: 2, behavior: 'sniffing', label: 'Litter Box' },
+    { id: 'cat_tunnel',  w: 108, h: 48, offy: 0, behavior: 'playing', label: 'Tunnel' },
   ];
 
   defs.forEach(d => {
@@ -240,6 +242,12 @@ function updateCatAI(dt) {
       if (game.screen === 'care') {
         ai.x = Math.max(35, Math.min(HOME_TOTAL_W - 35, ai.x));
       }
+      if (game.screen === 'timeout') {
+        const r0 = HOME_ROOM_W + 35;
+        const r1 = HOME_ROOM_W * 2 - 35;
+        ai.x = Math.max(r0, Math.min(r1, ai.x));
+        ai.y = Math.max(260, Math.min(H * 0.63, ai.y));
+      }
     }
   } else {
     // Count down current behavior
@@ -281,6 +289,13 @@ function updateCatAI(dt) {
       }
       pickNextBehavior(ai);
     }
+  }
+
+  if (game.screen === 'timeout') {
+    const r0 = HOME_ROOM_W + 35;
+    const r1 = HOME_ROOM_W * 2 - 35;
+    ai.x = Math.max(r0, Math.min(r1, ai.x));
+    ai.y = Math.max(260, Math.min(H * 0.63, ai.y));
   }
 }
 
@@ -332,6 +347,15 @@ function pickNextBehavior(ai) {
   if (sad) {
     spots = spots.filter(s => s.behavior === 'idle' || s.behavior === 'sitting' || s.behavior === 'sleeping' || s.behavior === 'looking');
     if (spots.length === 0) spots = [{ x: 300, y: 360, behavior: 'sitting', weight: 1 }];
+  }
+
+  if (game.screen === 'timeout') {
+    const rMin = HOME_ROOM_W + 45;
+    const rMax = HOME_ROOM_W * 2 - 45;
+    spots = spots.filter(s => s.x >= rMin && s.x <= rMax);
+    if (spots.length === 0) {
+      spots = [{ x: HOME_ROOM_W + 400, y: 340, behavior: 'idle', weight: 1 }];
+    }
   }
 
   // Weighted random pick
@@ -430,6 +454,16 @@ function drawCatBehavior() {
   } else if (ai.state === 'playing') {
     const playBounce = Math.abs(Math.sin(game.time * 5)) * 8 * s;
     drawCat(ai.x + Math.sin(game.time * 3) * 5, ai.y - playBounce, game.currentCat, game.currentStage, Math.sin(game.time * 2) > 0 ? 1 : -1, game.time * 2, true, isBlinking);
+  } else if (ai.state === 'tunneling') {
+    ctx.save();
+    ctx.translate(ai.x, ai.y + 14 * s);
+    ctx.scale(1.05, 0.72);
+    ctx.translate(-ai.x, -ai.y);
+    drawCat(ai.x, ai.y, game.currentCat, game.currentStage, ai.facing, game.time * 0.9, false, isBlinking);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(40,25,20,0.25)';
+    drawRoundRect(ai.x - 38, ai.y - 8, 76, 20, 8);
+    ctx.fill();
   } else if (ai.state === 'watching') {
     drawCat(ai.x, ai.y, game.currentCat, game.currentStage, ai.facing, game.time * 0.5, false, isBlinking);
   } else if (ai.state === 'sniffing') {
@@ -496,6 +530,7 @@ function drawCatBehavior() {
     drinking: 'drinking...', eating: 'eating...', sleeping: 'sleeping...',
     playing: 'playing!', looking: 'looking around', grooming: 'grooming',
     watching: 'watching...', sniffing: 'sniffing', pooping: 'pooping...',
+    tunneling: 'in the tunnel…',
   };
   if (stateLabel[ai.state]) {
     ctx.fillText(stateLabel[ai.state], ai.x, ai.y + 30 * s);

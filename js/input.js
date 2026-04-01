@@ -187,6 +187,10 @@ canvas.addEventListener('wheel', e => {
   if (game.screen === 'store') {
     e.preventDefault();
     game.storeScroll += e.deltaY * 0.5;
+  } else if (game.screen === 'care') {
+    e.preventDefault();
+    const maxS = Math.max(0, HOME_TOTAL_W - W);
+    game.homeScrollX = Math.max(0, Math.min(maxS, (game.homeScrollX || 0) + e.deltaY * 0.85));
   }
 }, { passive: false });
 

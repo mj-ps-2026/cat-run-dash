@@ -18,6 +18,15 @@ function getFurnitureOffset(id) {
   return { dx: pos.x - def.x, dy: pos.y - def.y };
 }
 
+function getNextFurnitureSpreadPosition() {
+  const n = game.furniture && game.furniture.length ? game.furniture.length - 1 : 0;
+  const room = n % HOME_ROOMS;
+  const ix = Math.floor(n / HOME_ROOMS);
+  const x = room * HOME_ROOM_W + 110 + (ix % 5) * 72 + (n % 6) * 14;
+  const y = 318 + (n % 3) * 26;
+  return { x: Math.max(60, Math.min(HOME_TOTAL_W - 60, x)), y: Math.min(H * 0.63, Math.max(265, y)) };
+}
+
 // ============================================================
 // FURNITURE DRAWING (in home)
 // ============================================================
@@ -415,6 +424,25 @@ function drawFurniture() {
     ctx.fillStyle = '#8080cc'; drawEllipse(200, H * 0.62, 16, 6); ctx.fill();
     ctx.fillStyle = '#ff9966'; drawEllipse(200, H * 0.615, 12, 4); ctx.fill();
     ctx.strokeStyle = '#6060aa'; ctx.lineWidth = 1.5; drawEllipse(200, H * 0.62, 16, 6); ctx.stroke();
+  }); }
+  if (owned.includes('cat_tunnel')) { withOffset('cat_tunnel', () => {
+    const tx = HOME_ROOM_W + 380, ty = 368;
+    ctx.fillStyle = '#c06040';
+    ctx.strokeStyle = '#8a4030';
+    ctx.lineWidth = 2;
+    drawRoundRect(tx - 52, ty - 22, 104, 44, 18);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 3;
+    for (let r = 0; r < 5; r++) {
+      ctx.beginPath();
+      ctx.arc(tx - 30 + r * 14, ty, 16, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(30,20,15,0.45)';
+    drawEllipse(tx, ty + 6, 28, 14);
+    ctx.fill();
   }); }
   if (owned.includes('litterbox')) { withOffset('litterbox', () => {
     const lx = 620, ly = 392;

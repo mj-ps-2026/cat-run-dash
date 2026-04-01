@@ -354,6 +354,30 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
 
   // ── Neck accessories ──
   const neckY2 = headY + headR * 0.6;
+  if (eq.neck === 'collar_vip') {
+    const neckYv = headY + headR * 0.6;
+    ctx.strokeStyle = '#a855f8';
+    ctx.lineWidth = 4 * s;
+    ctx.shadowColor = '#f0f';
+    ctx.shadowBlur = 8 * s;
+    ctx.beginPath();
+    ctx.ellipse(headX * 0.5, neckYv, bodyW * 0.36, bodyH * 0.16, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(headX * 0.5, neckYv + bodyH * 0.14, 3.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.5 + Math.sin(animTime * 6) * 0.35;
+    ctx.fillStyle = '#fff';
+    for (let vi = 0; vi < 4; vi++) {
+      const a = animTime * 3 + vi * 1.57;
+      ctx.beginPath();
+      ctx.arc(headX * 0.5 + Math.cos(a) * 14 * s, neckYv + Math.sin(a) * 6 * s, 1.5 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
   if (eq.neck === 'collar_red' || eq.neck === 'collar_gold' || eq.neck === 'collar_purple') {
     const colColors = { collar_red: '#e33', collar_gold: '#daa520', collar_purple: '#a050d0' };
     const tagColors = { collar_red: '#ff0', collar_gold: '#fff', collar_purple: '#e8a0ff' };
@@ -762,6 +786,19 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
     ctx.beginPath();
     ctx.ellipse(headX, hatY - 6 * s, headR * 0.5, 2.5 * s, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if (breed.sparkle) {
+    ctx.globalAlpha = 0.4 + Math.sin(animTime * 5) * 0.25;
+    for (let si = 0; si < 7; si++) {
+      const ang = animTime * 2.2 + si * 0.9;
+      const sr = headR * (0.85 + (si % 3) * 0.2);
+      ctx.fillStyle = si % 2 ? '#fff7cc' : '#e8c8ff';
+      ctx.beginPath();
+      ctx.arc(headX + Math.cos(ang) * sr, headY + Math.sin(ang * 1.1) * sr * 0.55, (1.5 + (si % 2)) * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.globalAlpha = 1;
   }
 

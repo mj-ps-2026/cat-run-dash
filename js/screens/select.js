@@ -14,21 +14,26 @@ function drawSelect() {
   ctx.strokeText('Choose Your Cat!', W / 2, 60);
   ctx.fillText('Choose Your Cat!', W / 2, 60);
 
-  // Cat grid (2 rows of 3)
-  const cols = 3, rows = 2;
+  const visible = [];
+  for (let i = 0; i < CAT_BREEDS.length; i++) {
+    if (CAT_BREEDS[i].secret && !hasUnlockedSecretBreeds()) continue;
+    visible.push(i);
+  }
+
+  const cols = 3;
   const cardW = 180, cardH = 180;
   const startX = (W - cols * cardW - (cols - 1) * 20) / 2;
   const startY = 90;
 
-  for (let i = 0; i < CAT_BREEDS.length; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
+  for (let vi = 0; vi < visible.length; vi++) {
+    const i = visible[vi];
+    const row = Math.floor(vi / cols);
+    const col = vi % cols;
     const cx = startX + col * (cardW + 20);
     const cy = startY + row * (cardH + 15);
 
     const hover = hitBox(mouse.x, mouse.y, cx, cy, cardW, cardH);
 
-    // Card
     ctx.fillStyle = hover ? '#fff8f0' : '#fff5e8';
     ctx.strokeStyle = hover ? '#f4a442' : '#ddd';
     ctx.lineWidth = hover ? 3 : 2;
@@ -36,16 +41,13 @@ function drawSelect() {
     ctx.fill();
     ctx.stroke();
 
-    // Cat
     drawCat(cx + cardW / 2, cy + cardH / 2 - 10, i, 0, 1, game.time, false);
 
-    // Name
     ctx.fillStyle = '#555';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(CAT_BREEDS[i].name, cx + cardW / 2, cy + cardH - 15);
 
-    // Click to select
     if (mouse.clicked && hover) {
       sfxMeow();
       game.currentCat = i;
@@ -54,5 +56,12 @@ function drawSelect() {
       initCatAI();
       game.screen = 'care';
     }
+  }
+
+  if (CAT_BREEDS.some(b => b.secret) && !hasUnlockedSecretBreeds()) {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Collect all base breeds to unlock magical cats ✨', W / 2, H - 36);
   }
 }

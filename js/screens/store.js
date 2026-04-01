@@ -1,6 +1,12 @@
 // screens/store.js — Store screen drawing
 // Depends on: game state, drawing utils, drawCat, buyItem, sfx
 
+function getStorePrice(item) {
+  if (!item) return 0;
+  if (game.modPackUnlocked) return Math.max(0, Math.floor(item.price * MOD_PRICE_MULT));
+  return item.price;
+}
+
 function drawStore() {
   setBgMusicTheme('store');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
@@ -52,6 +58,26 @@ function drawStore() {
     game.screen = 'care';
   }
 
+  drawButton(105, 8, 100, 32, 'Code', '#5a5a8a', true);
+  if (mouse.clicked && hitBox(mouse.x, mouse.y, 105, 8, 100, 32)) {
+    sfxClick();
+    const entered = typeof prompt === 'function' ? prompt('Supporter code:') : '';
+    if (entered && entered.trim().toUpperCase() === MOD_PACK_CODE) {
+      game.modPackUnlocked = true;
+      sfxComplete();
+      addFloat(W / 2, 80, 'Mod pack unlocked! 25% off + VIP items', '#a8f', { screen: true });
+    } else if (entered) {
+      sfxNope();
+    }
+  }
+
+  if (game.modPackUnlocked) {
+    ctx.fillStyle = '#7b6';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('⭐ Supporter prices active', 215, 28);
+  }
+
   // Category tabs
   const tabW = 140, tabH = 36;
   const tabStartX = (W - STORE_CATEGORIES.length * (tabW + 8)) / 2;
@@ -81,7 +107,11 @@ function drawStore() {
 
   // Get items for current category
   const catKey = STORE_CATEGORIES[game.storeCategory];
-  const items = STORE_ITEMS.filter(it => it.cat === catKey);
+  const items = STORE_ITEMS.filter(it =>
+    it.cat === catKey &&
+    (!it.vipOnly || game.modPackUnlocked) &&
+    !(it.growBoost && (game.growBoostUsed || game.currentStage >= 3))
+  );
 
   // Items grid
   const gridY = 105;
@@ -136,7 +166,8 @@ function drawStore() {
     const owned = game.inventory.includes(item.id) || game.furniture.includes(item.id) || game.ownedToys.includes(item.id);
     const equipped = Object.values(game.equipped).includes(item.id);
     const hover = hitBox(mouse.x, mouse.y, cx, cy, cardW, cardH);
-    const priceLabel = item.price === 0 ? 'Free' : `$${item.price}`;
+    const price = getStorePrice(item);
+    const priceLabel = price === 0 ? 'Free' : `$${price}`;
 
     // Card background
     ctx.fillStyle = owned ? '#e8ffe8' : (hover ? '#fff8f0' : '#fff');
@@ -161,6 +192,11 @@ function drawStore() {
     ctx.fillStyle = '#888';
     ctx.font = '11px sans-serif';
     ctx.fillText(item.desc, cx + 55, cy + 44);
+    if (item.vipOnly) {
+      ctx.fillStyle = '#a6c';
+      ctx.font = '9px sans-serif';
+      ctx.fillText('VIP', cx + 55, cy + 58);
+    }
 
     // Price or status
     if (owned) {
@@ -192,7 +228,7 @@ function drawStore() {
         // Consumables can be re-bought
         const bbx = cx + cardW - 68;
         const bby = cy + cardH - 34;
-        const canAfford = game.money >= item.price;
+        const canAfford = game.money >= price;
         drawButton(bbx, bby, 60, 26, priceLabel, canAfford ? '#4a9' : '#999', canAfford);
         if (mouse.clicked && hitBox(mouse.x, mouse.y, bbx, bby, 60, 26)) {
           if (canAfford) {
@@ -207,7 +243,7 @@ function drawStore() {
       // Buy button
       const bbx = cx + cardW - 68;
       const bby = cy + cardH - 34;
-      const canAfford = game.money >= item.price;
+      const canAfford = game.money >= price;
       drawButton(bbx, bby, 60, 26, priceLabel, canAfford ? '#4a9' : '#999', canAfford);
       if (mouse.clicked && hitBox(mouse.x, mouse.y, bbx, bby, 60, 26)) {
         if (canAfford) {
