@@ -1,9 +1,15 @@
 {
   "name": "cat-run-dash",
+  "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "description": "Cat Run Dash game",
   "scripts": {
     "dev": "serve . -l 5173",
     "build": "echo 'Static site: no build step'"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
   },
   "devDependencies": {
     "serve": "^14.2.4"
