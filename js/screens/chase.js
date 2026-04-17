@@ -65,7 +65,9 @@ function initChase() {
 
 function updateChase(dt) {
   const c = game.chase;
+  const currentCat = getCurrentCat();
   if (c.won || c.lost) return;
+  if (!currentCat) return;
 
   // Timer
   c.timer -= dt;
@@ -245,13 +247,16 @@ function updateChase(dt) {
     game.money += 8; // $8 for surviving the chase
     sfxWin();
     // Save cat to collection
-    game.cats.push({ breed: game.currentCat, stage: 3 });
+    game.currentCat.stage = 3;
+    game.cats.push(createCatInstance(currentCat.breed, currentCat));
   }
 
   updateParticles(c.particles, dt);
 }
 
 function drawChase() {
+  const currentCat = getCurrentCat();
+  const currentBreed = getCurrentBreedIndex();
   setBgMusicTheme('chase');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   const c = game.chase;
@@ -351,7 +356,7 @@ function drawChase() {
   }
   const moving = true;
   const pFacing = c.vx < -5 ? -1 : c.vx > 5 ? 1 : 1;
-  drawCat(c.px, playerScreenY, game.currentCat, 3, pFacing, game.time, moving);
+  if (currentCat) drawCat(c.px, playerScreenY, currentBreed, 3, pFacing, game.time, moving, false, currentCat.equipped, currentCat.look);
   ctx.globalAlpha = 1;
 
   if (c.scratchFlash > 0) {
@@ -472,10 +477,11 @@ function drawChase() {
       ctx.fillText('You Made It Home!', W / 2, H / 2 - 60);
       ctx.fillStyle = '#fff';
       ctx.font = '20px sans-serif';
-      ctx.fillText(`${CAT_BREEDS[game.currentCat].name} is safe! +$8`, W / 2, H / 2 - 15);
+      ctx.fillText(`${getCurrentCatName()} is safe! +$8`, W / 2, H / 2 - 15);
       drawButton(W / 2 - 100, H / 2 + 20, 200, 50, 'Get New Cat!', '#6c5ce7', true);
       if (mouse.clicked && hitBox(mouse.x, mouse.y, W / 2 - 100, H / 2 + 20, 200, 50)) {
         sfxClick();
+        game.currentCat = null;
         game.screen = 'select';
       }
     } else {
@@ -493,7 +499,7 @@ function drawChase() {
       drawButton(W / 2 - 80, H / 2 + 20, 160, 50, 'Try Again', '#e17055', true);
       if (mouse.clicked && hitBox(mouse.x, mouse.y, W / 2 - 80, H / 2 + 20, 160, 50)) {
         sfxClick();
-        game.currentStage = 3;
+        if (game.currentCat) game.currentCat.stage = 3;
         initChase();
       }
       drawButton(W / 2 - 80, H / 2 + 85, 160, 40, 'Main Menu', '#636e72', true);

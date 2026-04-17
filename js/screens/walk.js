@@ -7,6 +7,7 @@ const WALK_SCRATCH_COOLDOWN = 1.45;
 
 function initWalk() {
   const w = game.walk;
+  const currentStage = getCurrentStage();
   w.distWalked = 0;
   w.gathered = 0;
   w.walkCounted = false;
@@ -18,7 +19,7 @@ function initWalk() {
 
   // If player has adult cats, show companion selection
   const adultCats = game.cats.filter(c => c.stage === 3);
-  if (adultCats.length > 0 && game.currentStage > 0) {
+  if (adultCats.length > 0 && currentStage > 0) {
     w.choosingCompanion = true;
   } else {
     w.choosingCompanion = false;
@@ -26,7 +27,7 @@ function initWalk() {
 
   // Maze complexity scales with growth stage
   // Baby: no maze (open park), Kitten: easy 5x4, Teen: medium 7x5, Adult: hard 9x7
-  const stage = game.currentStage;
+  const stage = currentStage;
   if (stage === 0) {
     // Baby: no maze, just open park
     w.maze = null;
@@ -345,6 +346,8 @@ function updateWalk(dt) {
 }
 
 function drawWalk() {
+  const currentCat = getCurrentCat();
+  const currentStage = getCurrentStage();
   setBgMusicTheme('walk');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   const w = game.walk;
@@ -374,9 +377,9 @@ function drawWalk() {
       ctx.strokeStyle = hover ? '#6c6' : '#444';
       ctx.lineWidth = 2;
       drawRoundRect(cx, cy, cw, ch, 10); ctx.fill(); ctx.stroke();
-      drawCat(cx + cw/2, cy + ch/2 - 8, cat.breed, 3, 1, game.time + i, false);
+      drawCat(cx + cw/2, cy + ch/2 - 8, cat.breed, 3, 1, game.time + i, false, false, cat.equipped, cat.look);
       ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(CAT_BREEDS[cat.breed].name, cx + cw/2, cy + ch - 12);
+      ctx.fillText(cat.name || CAT_BREEDS[cat.breed].name, cx + cw/2, cy + ch - 12);
       if (mouse.clicked && hover) {
         sfxMeow();
         w.companion = cat;
@@ -463,8 +466,8 @@ function drawWalk() {
   const itemIcons = ['🌸', '🪶', '🍃', '🐚'];
   w.items.forEach(item => {
     if (!item.collected) {
-      const bob = Math.sin(game.time * 3 + item.bob) * 3;
-      ctx.fillStyle = `rgba(255,255,200,${0.3 + Math.sin(game.time * 5 + item.bob) * 0.3})`;
+      const bob = Math.sin(item.bob) * 2.5;
+      ctx.fillStyle = 'rgba(255,255,200,0.42)';
       ctx.beginPath();
       ctx.arc(item.x, item.y + bob, 12, 0, Math.PI * 2);
       ctx.fill();
@@ -482,9 +485,9 @@ function drawWalk() {
   // Draw companion cat
   if (w.companion) {
     const cFacing = w.companionX < w.px ? 1 : -1;
-    drawCat(w.companionX, w.companionY, w.companion.breed, 3, cFacing, game.time, true);
+    drawCat(w.companionX, w.companionY, w.companion.breed, 3, cFacing, game.time, true, false, w.companion.equipped, w.companion.look);
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(CAT_BREEDS[w.companion.breed].name, w.companionX, w.companionY + 25);
+    ctx.fillText(w.companion.name || CAT_BREEDS[w.companion.breed].name, w.companionX, w.companionY + 25);
   }
 
   // Draw player cat
@@ -499,7 +502,7 @@ function drawWalk() {
   if (w.caught) {
     // Caught animation — flash red
     ctx.globalAlpha = 0.5 + Math.sin(game.time * 15) * 0.3;
-    drawCat(w.px, w.py, game.currentCat, game.currentStage, facing, game.time, false);
+    if (currentCat) drawCat(w.px, w.py, currentCat.breed, currentCat.stage, facing, game.time, false, false, currentCat.equipped, currentCat.look);
     ctx.globalAlpha = 1;
     // Big warning text
     ctx.fillStyle = '#f44';
@@ -510,7 +513,7 @@ function drawWalk() {
     ctx.font = '18px sans-serif';
     ctx.fillText('Paw meter reset to 0...', W / 2, H / 2);
   } else {
-    drawCat(w.px, w.py, game.currentCat, game.currentStage, facing, game.time, moving);
+    if (currentCat) drawCat(w.px, w.py, currentCat.breed, currentCat.stage, facing, game.time, moving, false, currentCat.equipped, currentCat.look);
   }
 
   if (w.scratchFlash > 0 && !w.caught) {
@@ -549,7 +552,7 @@ function drawWalk() {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${diffLabels[game.currentStage]}  |  🐕 ${w.dogs.length} dog${w.dogs.length !== 1 ? 's' : ''}`, W / 2, 25);
+    ctx.fillText(`${diffLabels[currentStage]}  |  🐕 ${w.dogs.length} dog${w.dogs.length !== 1 ? 's' : ''}`, W / 2, 25);
   }
 
   // Scratch button (when dogs are present)

@@ -8,6 +8,9 @@ function getStorePrice(item) {
 }
 
 function drawStore() {
+  const currentCat = getCurrentCat();
+  const currentStage = getCurrentStage();
+  const equipped = getCurrentEquipped();
   setBgMusicTheme('store');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   // Shop interior background
@@ -110,7 +113,7 @@ function drawStore() {
   const items = STORE_ITEMS.filter(it =>
     it.cat === catKey &&
     (!it.vipOnly || game.modPackUnlocked) &&
-    !(it.growBoost && (game.growBoostUsed || game.currentStage >= 3))
+    !(it.growBoost && (game.growBoostUsed || currentStage >= 3))
   );
 
   // Items grid
@@ -164,7 +167,7 @@ function drawStore() {
     if (cy < gridY - cardH || cy > H - 50) return; // Off screen
 
     const owned = game.inventory.includes(item.id) || game.furniture.includes(item.id) || game.ownedToys.includes(item.id);
-    const equipped = Object.values(game.equipped).includes(item.id);
+    const isEquipped = Object.values(equipped).includes(item.id);
     const hover = hitBox(mouse.x, mouse.y, cx, cy, cardW, cardH);
     const price = getStorePrice(item);
     const priceLabel = price === 0 ? 'Free' : `$${price}`;
@@ -204,21 +207,26 @@ function drawStore() {
         // Equip/Unequip button
         const eqBtnX = cx + cardW - 68;
         const eqBtnY = cy + cardH - 34;
-        const eqColor = equipped ? '#e07050' : '#6c5ce7';
-        const eqLabel = equipped ? 'Remove' : 'Equip';
+        const eqColor = isEquipped ? '#e07050' : '#6c5ce7';
+        const eqLabel = isEquipped ? 'Remove' : 'Equip';
         drawButton(eqBtnX, eqBtnY, 60, 26, eqLabel, eqColor, true);
-        if (mouse.clicked && hitBox(mouse.x, mouse.y, eqBtnX, eqBtnY, 60, 26)) {
-          if (equipped) {
+        if (mouse.clicked && hitBox(mouse.x, mouse.y, eqBtnX, eqBtnY, 60, 26) && currentCat) {
+          if (isEquipped) {
             // Unequip
-            game.equipped[item.slot] = null;
+            currentCat.equipped[item.slot] = null;
             sfxEquip();
           } else {
             // Equip (replaces current in that slot)
-            game.equipped[item.slot] = item.id;
+            currentCat.equipped[item.slot] = item.id;
             sfxEquip();
             addFloat(cx + cardW / 2, cy, 'Equipped!', '#6c5ce7');
           }
         }
+      } else if (item.cat === 'furniture' && item.supply) {
+        ctx.fillStyle = '#6a6';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✓ Owned', cx + cardW / 2, cy + cardH - 16);
       } else if (item.cat === 'furniture') {
         ctx.fillStyle = '#6a6';
         ctx.font = 'bold 12px sans-serif';
@@ -256,7 +264,7 @@ function drawStore() {
     }
 
     // Equipped badge
-    if (equipped) {
+    if (isEquipped) {
       ctx.fillStyle = '#6c5ce7';
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'right';
@@ -265,7 +273,7 @@ function drawStore() {
   });
 
   // Cat preview with accessories (bottom right)
-  if (game.currentCat !== null) {
+  if (currentCat) {
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     drawRoundRect(W - 140, H - 160, 130, 145, 10);
     ctx.fill();
@@ -277,7 +285,7 @@ function drawStore() {
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Preview', W - 75, H - 145);
-    drawCat(W - 75, H - 75, game.currentCat, game.currentStage, 1, game.time, false);
+    drawCat(W - 75, H - 75, currentCat.breed, currentCat.stage, 1, game.time, false, false, currentCat.equipped, currentCat.look);
   }
 
   drawFloats();

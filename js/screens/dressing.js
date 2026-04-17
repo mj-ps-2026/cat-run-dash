@@ -2,6 +2,8 @@
 // Depends on: game state, drawing utils, drawCat, sfx
 
 function drawDressing() {
+  const currentCat = getCurrentCat();
+  const equipped = getCurrentEquipped();
   setBgMusicTheme('store');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
 
@@ -37,8 +39,33 @@ function drawDressing() {
   ctx.fillStyle = '#aaa';
   ctx.font = '12px sans-serif';
   ctx.fillText('Mirror', cx + 90, cy - 100);
-  if (game.currentCat !== null) {
-    drawCat(cx + 90, cy + 40, game.currentCat, game.currentStage, 1, game.time, false);
+  if (currentCat) {
+    drawCat(cx + 90, cy + 40, currentCat.breed, currentCat.stage, 1, game.time, false, false, currentCat.equipped, currentCat.look);
+  }
+
+  if (currentCat) {
+    ctx.fillStyle = '#555';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(currentCat.name, cx + 90, cy + 108);
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#666';
+    ctx.fillText(currentCat.gender === 'boy' ? 'Boy' : 'Girl', cx + 90, cy + 126);
+
+    drawButton(430, 116, 120, 34, 'Rename', '#6c5ce7', true);
+    if (mouse.clicked && hitBox(mouse.x, mouse.y, 430, 116, 120, 34)) {
+      const enteredName = typeof prompt === 'function' ? prompt('Rename your cat', currentCat.name) : currentCat.name;
+      const finalName = (enteredName || '').trim();
+      if (finalName) currentCat.name = finalName;
+      sfxClick();
+    }
+
+    const genderLabel = currentCat.gender === 'boy' ? 'Set Girl' : 'Set Boy';
+    drawButton(430, 156, 120, 34, genderLabel, '#e17055', true);
+    if (mouse.clicked && hitBox(mouse.x, mouse.y, 430, 156, 120, 34)) {
+      currentCat.gender = currentCat.gender === 'boy' ? 'girl' : 'boy';
+      sfxClick();
+    }
   }
 
   const slots = [
@@ -62,27 +89,27 @@ function drawDressing() {
     inSlot.forEach(it => {
       const bx = 40 + col * (cell + 6);
       if (bx > W - 180) return;
-      const equipped = game.equipped[slot.key] === it.id;
-      ctx.fillStyle = equipped ? '#d8e8ff' : '#fff';
-      ctx.strokeStyle = equipped ? '#6c5ce7' : '#ccc';
-      ctx.lineWidth = equipped ? 2 : 1;
+      const isEquipped = equipped[slot.key] === it.id;
+      ctx.fillStyle = isEquipped ? '#d8e8ff' : '#fff';
+      ctx.strokeStyle = isEquipped ? '#6c5ce7' : '#ccc';
+      ctx.lineWidth = isEquipped ? 2 : 1;
       drawRoundRect(bx, rowY, cell, cell, 8);
       ctx.fill();
       ctx.stroke();
       ctx.font = '22px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(it.icon, bx + cell / 2, rowY + 34);
-      if (mouse.clicked && hitBox(mouse.x, mouse.y, bx, rowY, cell, cell)) {
+      if (mouse.clicked && hitBox(mouse.x, mouse.y, bx, rowY, cell, cell) && currentCat) {
         sfxEquip();
-        if (equipped) game.equipped[slot.key] = null;
-        else game.equipped[slot.key] = it.id;
+        if (isEquipped) currentCat.equipped[slot.key] = null;
+        else currentCat.equipped[slot.key] = it.id;
       }
       col++;
     });
     const clearX = Math.min(W - 96, 40 + col * (cell + 6) + (col > 0 ? 10 : 0));
     drawButton(clearX, rowY, 82, cell, 'Clear', '#999', true);
-    if (mouse.clicked && hitBox(mouse.x, mouse.y, clearX, rowY, 82, cell)) {
-      game.equipped[slot.key] = null;
+    if (mouse.clicked && hitBox(mouse.x, mouse.y, clearX, rowY, 82, cell) && currentCat) {
+      currentCat.equipped[slot.key] = null;
       sfxClick();
     }
   });

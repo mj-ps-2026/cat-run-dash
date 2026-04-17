@@ -8,14 +8,15 @@ const HOME_ROOM_W = 800;
 const HOME_ROOMS = 3;
 const HOME_TOTAL_W = HOME_ROOM_W * HOME_ROOMS;
 
-// Backyard egg hunt: time-limited (Easter season). Uses local date.
+// Backyard egg hunt — disabled (was Easter season; re-enable by restoring date check below)
 function isEggHuntEventActive() {
-  const now = new Date();
-  const m = now.getMonth();
-  const day = now.getDate();
-  if (m === 2) return true; // March (Easter season)
-  if (m === 3 && day <= 25) return true; // through April 25
   return false;
+  // const now = new Date();
+  // const m = now.getMonth();
+  // const day = now.getDate();
+  // if (m === 2) return true;
+  // if (m === 3 && day <= 25) return true;
+  // return false;
 }
 
 // Visual theme per scroll segment (care home). Used by drawSkyBg / drawHomeBg.
@@ -79,6 +80,11 @@ const HOME_ROOM_THEMES = [
 const NUM_BASE_CAT_BREEDS = 6;
 const MOD_PACK_CODE = 'CORAROCKS';
 const MOD_PRICE_MULT = 0.75;
+
+// New-cat customization (indices stored on cat instance)
+const CAT_LOOK_FUR = ['#f4a442', '#2a2a2a', '#f0eee8', '#7a7a8a', '#e09050', '#4a3a5a'];
+const CAT_LOOK_EYES = ['#44aa22', '#4488ff', '#ffaa00'];
+const CAT_LOOK_NOSE = ['#ffb0c0', '#a07060', '#2a2a2a'];
 
 const CAT_BREEDS = [
   { name: 'Marmalade', bodyColor: '#f4a442', stripeColor: '#d4812a', earInner: '#ffb8d0', eyeColor: '#4a2' },
@@ -198,6 +204,9 @@ const STORE_ITEMS = [
   { id: 'couch_blue',   cat: 'furniture', name: 'Blue Couch',      price: 12, icon: '🛋️', desc: 'Cool comfort' },
   { id: 'litterbox',    cat: 'furniture', name: 'Litter Box',      price: 0,  icon: '📦', desc: 'Keeps poops contained' },
   { id: 'cat_tunnel',   cat: 'furniture', name: 'Cat Tunnel',      price: 14, icon: '🌀', desc: 'Peek & zoom' },
+  { id: 'cat_scoop',    cat: 'furniture', name: 'Cat Scoop',       price: 0,  icon: '🪮', desc: 'Free — equip from Cat supplies', supply: true },
+  { id: 'floor_lamp_brass',  cat: 'furniture', name: 'Brass Floor Lamp',  price: 22, icon: '💡', desc: 'Tap at home to turn on/off' },
+  { id: 'floor_lamp_modern', cat: 'furniture', name: 'Modern Floor Lamp', price: 24, icon: '🔦', desc: 'Tap at home to turn on/off' },
 ];
 
 // Behavior emotes — chosen based on mood (paw fullness)
@@ -288,13 +297,15 @@ const FURNITURE_DEFAULTS = {
   couch: { x: 320, y: 340 }, couch_blue: { x: 320, y: 340 },
   litterbox: { x: 620, y: 392 },
   cat_tunnel: { x: HOME_ROOM_W + 380, y: 368 },
+  floor_lamp_brass: { x: HOME_ROOM_W * 2 + 180, y: 332 },
+  floor_lamp_modern: { x: HOME_ROOM_W * 2 + 260, y: 330 },
 };
 
 // Map variant IDs to their base furniture type for behavior/hitbox purposes
 const FURNITURE_BASE = {};
 Object.keys(FURNITURE_DEFAULTS).forEach(id => {
   // Base type is the part before the last underscore variant, if it matches a known base
-  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch','litterbox','cat_tunnel'];
+  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch','litterbox','cat_tunnel','floor_lamp'];
   FURNITURE_BASE[id] = bases.find(b => id === b || id.startsWith(b + '_')) || id;
 });
 

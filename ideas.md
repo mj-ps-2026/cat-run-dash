@@ -15,3 +15,20 @@
 [x] Stuff that gets bought in the store gets placed more evenly through the house, and on placement the view has it in the viewport
 [x] Let's design the chill zone. Let's made it visibly part of the house. The cat behaves normally (inside the house mode) and can interact with the limited stuff thats in there.
 [x] Tool tips shouldn't always be shown. Put them near the main controls (along the bottom)
+
+[x] BUG: after all cats have been gotten, and perhaps also if the same cat is chosen twice, the game restarts and seems not able to support that. Can we refactor cats so that each instance of the cat is unique and fully supported?
+[x] BUG: there's not way to move somewhere in the house without the keyboard. Need a way to move around the house with just touchscreen. Perhaps just tapping and dragging on the house background.
+[x] IMPROVE: name selection and gender selection needs to be embedded
+[x] IMPROVE: Make music more different when the cat has different moods. Faster tempo, different melody.
+[x] FEAT: create new cat workflow, choose fur, nose, eyes, etc.
+[x] IMPROVE: No blinking items in explore/outdoor mode.
+[x] FEAT: Cat locatiosn. Travel with a map, lots of different places to go. Kitty is in a car. At destination, kitty hops out and does whatever happens at that place.
+[x] We want to be able to have lamps that can turn on or off. They should be 20 or more dollars.
+
+[x] FEAT: Cat scooper. To empty the litter box, there needs to be a purchasable cat scoop but it's free. To use the cat scooper, you grab it from the cabinet. It says cat supplies. You can equip it from here.
+[x] FEAT: Want to be able to control the cat in the house, using the same navigation mechanic as outside.
+[x] Critters as little "cat" style animations as opposed ot just emojis. Let's have something more engaging here. We also want them to try harder to not get caught by the cat. Need to add dash and scratch mode to all outdoor modes to help support this.
+[x] Comment out Easter mode.
+[x] Fun reaction when the critter gets caught
+
+[x] We want to introduce player avatars with an avatar creator. This is a new workflow coming before the selection of a cat

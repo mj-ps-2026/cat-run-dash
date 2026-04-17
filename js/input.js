@@ -20,6 +20,9 @@ const touchCtrl = {
   uiStartX: 0, uiStartY: 0,
   uiMoved: false,
   scrollLastY: 0,
+  careScrollMode: false,
+  careScrollStartX: 0,
+  careScroll0: 0,
 };
 
 const JOY_BASE_X = 110, JOY_BASE_Y = 500;
@@ -68,10 +71,11 @@ function wantsJoystick() {
 }
 
 function wantsDashButton() {
-  return game.screen === 'chase' && !game.chase.won && !game.chase.lost;
+  return (game.screen === 'chase' && !game.chase.won && !game.chase.lost) || game.screen === 'backyard';
 }
 
 function wantsWalkScratchButton() {
+  if (game.screen === 'backyard') return true;
   return game.screen === 'walk' && !game.walk.caught && !game.walk.choosingCompanion && game.walk.dogs.length > 0;
 }
 
@@ -104,13 +108,32 @@ canvas.addEventListener('touchstart', e => {
       continue;
     }
 
-    // Dash button zone (chase only)
+    // Dash button zone (chase + backyard)
     if (wantsDashButton() && touchCtrl.dashId === null &&
         Math.hypot(p.x - DASH_BTN_X, p.y - DASH_BTN_Y) < DASH_BTN_R + 20) {
       touchCtrl.dashId = t.identifier;
       touchCtrl.dashActive = true;
       keys['Space'] = true;
       continue;
+    }
+
+    // Care: drag sky/wall to pan between rooms (no keyboard needed)
+    if (game.screen === 'care') {
+      const topUI = hitBox(p.x, p.y, 0, 0, 290, 155) || hitBox(p.x, p.y, W - 130, 0, 120, 45);
+      if (p.y < H * 0.30 && !topUI) {
+        touchCtrl.careScrollMode = true;
+        touchCtrl.careScrollStartX = p.x;
+        touchCtrl.careScroll0 = game.homeScrollX || 0;
+        mouse.x = p.x;
+        mouse.y = p.y;
+        mouse.down = true;
+        touchCtrl.uiId = t.identifier;
+        touchCtrl.uiStartX = p.x;
+        touchCtrl.uiStartY = p.y;
+        touchCtrl.uiMoved = false;
+        touchCtrl.scrollLastY = p.y;
+        continue;
+      }
     }
 
     // UI touch (also used for click-to-move steering)
@@ -132,13 +155,17 @@ canvas.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
     const p = touchToCanvas(t, rect);
 
-    // UI touch (handles steering + store scroll)
+    // UI touch (handles steering + store scroll + care sky pan)
     if (t.identifier === touchCtrl.uiId) {
       mouse.x = p.x;
       mouse.y = p.y;
       const dist = Math.hypot(p.x - touchCtrl.uiStartX, p.y - touchCtrl.uiStartY);
       if (dist > 10) touchCtrl.uiMoved = true;
-      if (game.screen === 'store') {
+      if (touchCtrl.careScrollMode && game.screen === 'care') {
+        const maxS = Math.max(0, HOME_TOTAL_W - W);
+        const dx = p.x - touchCtrl.careScrollStartX;
+        game.homeScrollX = Math.max(0, Math.min(maxS, touchCtrl.careScroll0 - dx));
+      } else if (game.screen === 'store') {
         game.storeScroll += (touchCtrl.scrollLastY - p.y) * 1.5;
         touchCtrl.scrollLastY = p.y;
       }
@@ -172,8 +199,9 @@ function handleTouchEnd(e) {
       const p = touchToCanvas(t, rect);
       mouse.x = p.x;
       mouse.y = p.y;
-      // Always register click on release (steering screens handle drag natively)
-      mouse.clicked = true;
+      const skipCareTap = touchCtrl.careScrollMode && touchCtrl.uiMoved;
+      touchCtrl.careScrollMode = false;
+      if (!skipCareTap) mouse.clicked = true;
       mouse.down = false;
       touchCtrl.uiId = null;
     }
@@ -198,9 +226,11 @@ canvas.addEventListener('wheel', e => {
 function drawTouchControls() {
   if (!touchCtrl.isTouch) return;
 
-  // Dash button (chase only)
+  // Dash button (chase + backyard)
   if (wantsDashButton()) {
-    const ready = game.chase.dashCooldown <= 0;
+    const ready = game.screen === 'chase'
+      ? game.chase.dashCooldown <= 0
+      : (game.backyard.dashCooldown || 0) <= 0;
     ctx.globalAlpha = ready ? 0.35 : 0.12;
     ctx.fillStyle = ready ? '#ffcc44' : '#666';
     ctx.beginPath();

@@ -123,7 +123,7 @@ function setBgMusicTheme(screen) {
 
 function getMusicTempoMultiplier() {
   if (typeof getPawMood !== 'function') return 1.0;
-  return 1.0 + getPawMood() * 0.15;
+  return 0.88 + getPawMood() * 0.32;
 }
 
 function runBgMusicBeat() {
@@ -132,7 +132,15 @@ function runBgMusicBeat() {
   const beatSec = th.msPerBeat / 1000;
   const b = bgMusic.beat % th.mel.length;
   const mel = th.mel[b];
-  if (mel) playMusicNote(BG_NOTES[mel], beatSec * 0.9, 0.042, 'sine');
+  if (mel) {
+    let f = BG_NOTES[mel];
+    if ((bgMusic.theme === 'care' || bgMusic.theme === 'care_calm') && typeof getPawMood === 'function') {
+      const m = getPawMood();
+      if (m < 0.22) f *= 0.93;
+      else if (m > 0.68) f *= 1.045;
+    }
+    playMusicNote(f, beatSec * 0.9, 0.042, 'sine');
+  }
   const bass = th.bass[b];
   if (bass) playMusicNote(BG_NOTES[bass], beatSec * 1.6, 0.028, 'triangle');
   bgMusic.beat++;
@@ -157,7 +165,38 @@ function startBgMusic() {
 function stopBgMusic() {
   if (bgMusic.interval) { clearInterval(bgMusic.interval); bgMusic.interval = null; }
   bgMusic.playing = false;
+  bgMusic._lastMs = undefined;
 }
+
+/** Stop timers and suspend the audio graph (tab hidden, navigating away, or window closing). */
+function suspendAudioEngine() {
+  stopBgMusic();
+  try {
+    if (audioCtx.state === 'running') audioCtx.suspend();
+  } catch (e) {}
+}
+
+/** Resume context and restart BGM if the player left music enabled. */
+function resumeAudioEngineIfAppropriate() {
+  if (!bgMusic.enabled) return;
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+  startBgMusic();
+}
+
+(function setupAudioLifecycle() {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('pagehide', () => suspendAudioEngine());
+  window.addEventListener('beforeunload', () => suspendAudioEngine());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) suspendAudioEngine();
+    else resumeAudioEngineIfAppropriate();
+  });
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) resumeAudioEngineIfAppropriate();
+  });
+})();
 
 function toggleBgMusic() {
   bgMusic.enabled = !bgMusic.enabled;

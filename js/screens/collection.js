@@ -25,7 +25,7 @@ function drawCollection() {
     ctx.fillText('No cats yet! Go raise one!', W / 2, H / 2);
   } else {
     const cols = 4;
-    const cardW = 155, cardH = 155;
+    const cardW = 155, cardH = 180;
     const gap = 12;
     const totalCols = Math.min(game.cats.length, cols);
     const startX = (W - totalCols * cardW - (totalCols - 1) * gap) / 2;
@@ -48,23 +48,26 @@ function drawCollection() {
       ctx.stroke();
 
       // Cat drawing
-      drawCat(cx + cardW / 2, cy + cardH / 2 - 12, cat.breed, cat.stage, 1, game.time + i * 0.7, false);
+      drawCat(cx + cardW / 2, cy + cardH / 2 - 16, cat.breed, cat.stage, 1, game.time + i * 0.7, false, false, cat.equipped, cat.look);
 
       // Name
       ctx.fillStyle = '#eee';
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(CAT_BREEDS[cat.breed].name, cx + cardW / 2, cy + cardH - 30);
+      ctx.fillText(cat.name || CAT_BREEDS[cat.breed].name, cx + cardW / 2, cy + cardH - 42);
+      ctx.fillStyle = '#bbb';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(cat.gender === 'boy' ? 'Boy' : 'Girl', cx + cardW / 2, cy + cardH - 28);
 
       // House status badge
       if (inHouse) {
         ctx.fillStyle = '#6c6';
         ctx.font = '11px sans-serif';
-        ctx.fillText('🏠 In House', cx + cardW / 2, cy + cardH - 14);
+        ctx.fillText('🏠 In House', cx + cardW / 2, cy + cardH - 40);
       } else {
         ctx.fillStyle = '#888';
         ctx.font = '11px sans-serif';
-        ctx.fillText('Click to show', cx + cardW / 2, cy + cardH - 14);
+        ctx.fillText('Click to show', cx + cardW / 2, cy + cardH - 40);
       }
 
       // Hover highlight
@@ -77,8 +80,21 @@ function drawCollection() {
         ctx.setLineDash([]);
       }
 
-      // Click to toggle house visibility
-      if (mouse.clicked && hover) {
+      const renameX = cx + 10;
+      const genderX = cx + cardW - 65;
+      const actionY = cy + cardH - 30;
+      drawButton(renameX, actionY, 55, 22, 'Name', '#6c5ce7', true);
+      drawButton(genderX, actionY, 55, 22, cat.gender === 'boy' ? 'Boy' : 'Girl', '#e17055', true);
+
+      if (mouse.clicked && hitBox(mouse.x, mouse.y, renameX, actionY, 55, 22)) {
+        const enteredName = typeof prompt === 'function' ? prompt('Rename this cat', cat.name || CAT_BREEDS[cat.breed].name) : cat.name;
+        const finalName = (enteredName || '').trim();
+        if (finalName) cat.name = finalName;
+        sfxClick();
+      } else if (mouse.clicked && hitBox(mouse.x, mouse.y, genderX, actionY, 55, 22)) {
+        cat.gender = cat.gender === 'boy' ? 'girl' : 'boy';
+        sfxClick();
+      } else if (mouse.clicked && hover) {
         sfxClick();
         if (inHouse) {
           game.houseCats = game.houseCats.filter(idx => idx !== i);

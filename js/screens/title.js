@@ -57,7 +57,7 @@ function drawTitle() {
   if (mouse.clicked && hitBox(mouse.x, mouse.y, W / 2 - 90, 440, 180, 55)) {
     sfxClick();
     audioCtx.resume();
-    game.screen = 'select';
+    game.screen = 'avatar';
   }
 
   // Cat collection count

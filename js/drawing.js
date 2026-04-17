@@ -89,8 +89,19 @@ function drawButton(x, y, w, h, text, color, hovered = false, icon = '') {
 // ============================================================
 // CAT DRAWING
 // ============================================================
-function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = false, eyesClosed = false) {
+function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = false, eyesClosed = false, equippedOverride, lookOverride) {
   const breed = CAT_BREEDS[breedIdx];
+  const eff = lookOverride && lookOverride.fur != null
+    ? {
+        ...breed,
+        bodyColor: CAT_LOOK_FUR[lookOverride.fur % CAT_LOOK_FUR.length],
+        stripeColor: darken(CAT_LOOK_FUR[lookOverride.fur % CAT_LOOK_FUR.length], 38),
+        earInner: lighten(CAT_LOOK_FUR[lookOverride.fur % CAT_LOOK_FUR.length], 45),
+        eyeColor: CAT_LOOK_EYES[lookOverride.eyes % CAT_LOOK_EYES.length],
+        calico: false,
+        tuxedo: false,
+      }
+    : breed;
   const s = STAGE_SCALE[stage];
   const headRatio = STAGE_HEAD_RATIO[stage];
 
@@ -105,7 +116,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   ctx.translate(x, y + bounce);
 
   // Tail
-  ctx.strokeStyle = breed.bodyColor;
+  ctx.strokeStyle = eff.bodyColor;
   ctx.lineWidth = 5 * s;
   ctx.lineCap = 'round';
   ctx.beginPath();
@@ -118,19 +129,19 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   ctx.stroke();
 
   // Body
-  ctx.fillStyle = breed.bodyColor;
+  ctx.fillStyle = eff.bodyColor;
   drawEllipse(0, 0, bodyW, bodyH * 0.7);
   ctx.fill();
 
   // Tuxedo white belly
-  if (breed.tuxedo) {
-    ctx.fillStyle = breed.stripeColor;
+  if (eff.tuxedo) {
+    ctx.fillStyle = eff.stripeColor;
     drawEllipse(0, bodyH * 0.1, bodyW * 0.6, bodyH * 0.45);
     ctx.fill();
   }
 
   // Calico patches
-  if (breed.calico) {
+  if (eff.calico) {
     ctx.fillStyle = '#2a2a2a';
     drawEllipse(-bodyW * 0.3, -bodyH * 0.1, bodyW * 0.25, bodyH * 0.25);
     ctx.fill();
@@ -144,7 +155,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   const legSpread = bodyW * 0.5;
   const legW = 7 * s;
   const legH = 14 * s;
-  ctx.fillStyle = breed.bodyColor;
+  ctx.fillStyle = eff.bodyColor;
   for (let i = -1; i <= 1; i += 2) {
     const legBounce = walking ? Math.sin(animTime * 8 + i * 1.5) * 4 * s : 0;
     // Front legs
@@ -156,7 +167,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   }
 
   // Paw tips (white for tuxedo)
-  if (breed.tuxedo) {
+  if (eff.tuxedo) {
     ctx.fillStyle = '#f0eee8';
     for (let i = -1; i <= 1; i += 2) {
       const legBounce = walking ? Math.sin(animTime * 8 + i * 1.5) * 4 * s : 0;
@@ -168,12 +179,12 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   // Head
   const headY = -bodyH * 0.5;
   const headX = facing * bodyW * 0.15;
-  ctx.fillStyle = breed.bodyColor;
+  ctx.fillStyle = eff.bodyColor;
   drawEllipse(headX, headY, headR, headR * 0.9);
   ctx.fill();
 
   // Tuxedo face
-  if (breed.tuxedo) {
+  if (eff.tuxedo) {
     ctx.fillStyle = '#f0eee8';
     ctx.beginPath();
     ctx.moveTo(headX - headR * 0.3, headY + headR * 0.1);
@@ -191,7 +202,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
     const earX = headX + side * headR * 0.6;
     const earY = headY - headR * 0.7;
     // Outer ear
-    ctx.fillStyle = breed.bodyColor;
+    ctx.fillStyle = eff.bodyColor;
     ctx.beginPath();
     ctx.moveTo(earX - earW * 0.5, earY + earH * 0.5);
     ctx.lineTo(earX, earY - earH * 0.5);
@@ -199,7 +210,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
     ctx.closePath();
     ctx.fill();
     // Inner ear
-    ctx.fillStyle = breed.earInner;
+    ctx.fillStyle = eff.earInner;
     ctx.beginPath();
     ctx.moveTo(earX - earW * 0.25, earY + earH * 0.3);
     ctx.lineTo(earX, earY - earH * 0.2);
@@ -232,7 +243,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
       ctx.fillStyle = '#fff';
       drawEllipse(eyeX + eyeR * 0.2, eyeY - eyeR * 0.25, eyeR * 0.2, eyeR * 0.2);
       ctx.fill();
-      ctx.fillStyle = breed.eyeColor;
+      ctx.fillStyle = eff.eyeColor;
       ctx.globalAlpha = 0.4;
       drawEllipse(eyeX + facing * eyeR * 0.1, eyeY, eyeR * 0.45, eyeR * 0.55);
       ctx.fill();
@@ -241,7 +252,8 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   }
 
   // Nose
-  ctx.fillStyle = '#ffb0c0';
+  const noseFill = lookOverride && lookOverride.nose != null ? CAT_LOOK_NOSE[lookOverride.nose % CAT_LOOK_NOSE.length] : '#ffb0c0';
+  ctx.fillStyle = noseFill;
   ctx.beginPath();
   const noseX = headX + facing * headR * 0.05;
   const noseY = headY + headR * 0.25;
@@ -262,7 +274,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   ctx.stroke();
 
   // Whiskers
-  ctx.strokeStyle = breed.bodyColor === '#2a2a2a' ? '#666' : '#888';
+  ctx.strokeStyle = eff.bodyColor === '#2a2a2a' ? '#666' : '#888';
   ctx.lineWidth = 1 * s;
   for (let side = -1; side <= 1; side += 2) {
     for (let i = -1; i <= 1; i++) {
@@ -274,8 +286,8 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   }
 
   // Stripes (for tabby cats)
-  if (!breed.calico && !breed.tuxedo && breed.stripeColor !== breed.bodyColor) {
-    ctx.strokeStyle = breed.stripeColor;
+  if (!eff.calico && !eff.tuxedo && eff.stripeColor !== eff.bodyColor) {
+    ctx.strokeStyle = eff.stripeColor;
     ctx.lineWidth = 2 * s;
     ctx.globalAlpha = 0.3;
     for (let i = -2; i <= 2; i++) {
@@ -288,7 +300,7 @@ function drawCat(x, y, breedIdx, stage, facing = 1, animTime = 0, walking = fals
   }
 
   // === ACCESSORIES ===
-  const eq = game.equipped;
+  const eq = normalizeEquipped(equippedOverride || getCurrentEquipped());
 
   // ── Back accessories ──
   if (eq.back === 'cape' || eq.back === 'cape_blue') {

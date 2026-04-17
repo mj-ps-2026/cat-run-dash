@@ -18,6 +18,11 @@ function getFurnitureOffset(id) {
   return { dx: pos.x - def.x, dy: pos.y - def.y };
 }
 
+function isLampOn(id) {
+  if (game.furnitureLights && game.furnitureLights[id] !== undefined) return !!game.furnitureLights[id];
+  return true;
+}
+
 function getNextFurnitureSpreadPosition() {
   const n = game.furniture && game.furniture.length ? game.furniture.length - 1 : 0;
   const room = n % HOME_ROOMS;
@@ -424,6 +429,42 @@ function drawFurniture() {
     ctx.fillStyle = '#8080cc'; drawEllipse(200, H * 0.62, 16, 6); ctx.fill();
     ctx.fillStyle = '#ff9966'; drawEllipse(200, H * 0.615, 12, 4); ctx.fill();
     ctx.strokeStyle = '#6060aa'; ctx.lineWidth = 1.5; drawEllipse(200, H * 0.62, 16, 6); ctx.stroke();
+  }); }
+  if (owned.includes('floor_lamp_brass')) { withOffset('floor_lamp_brass', () => {
+    const def = FURNITURE_DEFAULTS.floor_lamp_brass;
+    const lx = def.x, ly = def.y;
+    const on = isLampOn('floor_lamp_brass');
+    ctx.fillStyle = '#5a4020';
+    ctx.fillRect(lx - 9, ly + 18, 18, 88);
+    ctx.fillStyle = on ? '#f4e8c8' : '#c8b898';
+    drawRoundRect(lx - 15, ly - 6, 30, 22, 7);
+    ctx.fill();
+    ctx.strokeStyle = '#8a7030';
+    ctx.lineWidth = 2;
+    drawRoundRect(lx - 15, ly - 6, 30, 22, 7);
+    ctx.stroke();
+    if (on) {
+      ctx.fillStyle = 'rgba(255, 230, 150, 0.28)';
+      ctx.beginPath();
+      ctx.arc(lx, ly - 8, 62, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }); }
+  if (owned.includes('floor_lamp_modern')) { withOffset('floor_lamp_modern', () => {
+    const def = FURNITURE_DEFAULTS.floor_lamp_modern;
+    const lx = def.x, ly = def.y;
+    const on = isLampOn('floor_lamp_modern');
+    ctx.fillStyle = '#444';
+    ctx.fillRect(lx - 8, ly + 20, 16, 90);
+    ctx.fillStyle = on ? '#e8f0ff' : '#a0a0a8';
+    drawRoundRect(lx - 12, ly - 4, 24, 18, 5);
+    ctx.fill();
+    if (on) {
+      ctx.fillStyle = 'rgba(180, 210, 255, 0.22)';
+      ctx.beginPath();
+      ctx.arc(lx, ly - 6, 48, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }); }
   if (owned.includes('cat_tunnel')) { withOffset('cat_tunnel', () => {
     const tx = HOME_ROOM_W + 380, ty = 368;

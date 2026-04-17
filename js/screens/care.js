@@ -52,6 +52,54 @@ function updateCare(dt) {
     const maxS = Math.max(0, HOME_TOTAL_W - W);
     if (keys['ArrowLeft']) game.homeScrollX = Math.max(0, (game.homeScrollX || 0) - 280 * dt);
     if (keys['ArrowRight']) game.homeScrollX = Math.min(maxS, (game.homeScrollX || 0) + 280 * dt);
+    // Mouse: drag sky/wall to pan (same as touch)
+    if (mouse.down && !touchCtrl.isTouch) {
+      const topUI = hitBox(mouse.x, mouse.y, 0, 0, 290, 155) || hitBox(mouse.x, mouse.y, W - 130, 0, 120, 45);
+      if (mouse.y < H * 0.30 && !topUI) {
+        if (game._carePanLastX !== undefined) {
+          game.homeScrollX = Math.max(0, Math.min(maxS, (game.homeScrollX || 0) - (mouse.x - game._carePanLastX) * 1.15));
+        }
+        game._carePanLastX = mouse.x;
+      } else {
+        game._carePanLastX = undefined;
+      }
+    } else {
+      game._carePanLastX = undefined;
+    }
+    // Desktop: hold on floor to steer cat (same mechanic as walk/backyard)
+    if (!touchCtrl.isTouch && mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
+      const mx = mouse.x, my = mouse.y;
+      const sx = game.homeScrollX || 0;
+      const wx = mx + sx;
+      const onButton = hitBox(mx, my, 10, 10, 250, 110) || hitBox(mx, my, W - 120, 10, 110, 35)
+        || hitBox(mx, my, 10, 130, 125, 36) || hitBox(mx, my, 10, 175, 125, 36);
+      const inRoom = my > 70 && my < H - 90 && mx > 0 && mx < W - 150;
+      const panSky = my < H * 0.30;
+      if (inRoom && !onButton && !panSky) {
+        const boxes = getFurnitureHitboxes();
+        let onFurniture = false;
+        for (const box of boxes) {
+          if (wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
+            onFurniture = true;
+            break;
+          }
+        }
+        const cab = { x: HOME_ROOM_W * 2 + 22, y: H * 0.26, w: 58, h: 118 };
+        if (wx >= cab.x && wx <= cab.x + cab.w && my >= cab.y && my <= cab.y + cab.h) onFurniture = true;
+        if (!onFurniture) {
+          const ai = game.catAI;
+          const dist = Math.hypot(wx - ai.x, my - ai.y);
+          if (dist > 10) {
+            ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, wx));
+            ai.targetY = Math.max(250, Math.min(H * 0.63, my));
+            ai._queuedBehavior = 'idle';
+            ai.state = 'walking';
+            ai.stateTimer = 99;
+            ai.nextStateTimer = 2;
+          }
+        }
+      }
+    }
   }
 
   // Litter scrub: drag inside tray surface to reduce dirt (clumps follow dirt)
@@ -63,7 +111,8 @@ function updateCare(dt) {
     const lp = getFurnitureXY('litterbox');
     const tx = lp.x - 22, ty = lp.y - 4, tw = 44, th = 26;
     const inTray = wx >= tx && wx <= tx + tw && my >= ty && my <= ty + th;
-    if (d0 > 0.02 && inTray && mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
+    const canScoop = game.inventory.includes('cat_scoop') && game.equippedTool === 'scoop';
+    if (d0 > 0.02 && inTray && mouse.down && canScoop && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
       if (!game.litterScrub) game.litterScrub = { lx: wx, ly: my };
       else {
         const dist = Math.hypot(wx - game.litterScrub.lx, my - game.litterScrub.ly);
@@ -215,6 +264,7 @@ function updateCare(dt) {
 }
 
 function drawCare() {
+  const currentStage = getCurrentStage();
   const sx = game.homeScrollX || 0;
   const mx = mouse.x, my = mouse.y;
   const wx = mx + sx;
@@ -259,6 +309,28 @@ function drawCare() {
   ctx.font = 'bold 10px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Dress', dressX + 28, H * 0.36);
+
+  // Kitchen: Cat supplies (equip free scoop for litter)
+  const cabX = HOME_ROOM_W * 2 + 22, cabY = H * 0.26;
+  ctx.fillStyle = '#9a8068';
+  drawRoundRect(cabX, cabY, 58, 118, 6);
+  ctx.fill();
+  ctx.strokeStyle = '#5a4838';
+  ctx.lineWidth = 2;
+  drawRoundRect(cabX, cabY, 58, 118, 6);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  drawRoundRect(cabX + 6, cabY + 10, 46, 52, 3);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Cat', cabX + 29, cabY + 28);
+  ctx.fillText('supplies', cabX + 29, cabY + 40);
+  if (game.equippedTool === 'scoop') {
+    ctx.font = '22px sans-serif';
+    ctx.fillText('🪮', cabX + 29, cabY + 98);
+  }
 
   // Floor poops (click to clean)
   if (game.floorPoops && game.floorPoops.length > 0) {
@@ -364,7 +436,7 @@ function drawCare() {
   ctx.fillStyle = '#a86e3e';
   ctx.font = 'bold 22px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${CAT_BREEDS[game.currentCat].name} — ${STAGES[game.currentStage]}`, W / 2, 35);
+  ctx.fillText(`${getCurrentCatLabel()} — ${STAGES[currentStage]}`, W / 2, 35);
 
   // Paw meter on the right
   drawPawMeter(680, 280, game.care, 1.2);
@@ -378,7 +450,7 @@ function drawCare() {
   // Growth progress display
   ctx.fillStyle = '#666';
   ctx.font = '12px sans-serif';
-  const stageStr = STAGES.map((s, i) => i === game.currentStage ? `[${s}]` : s).join(' → ');
+  const stageStr = STAGES.map((s, i) => i === currentStage ? `[${s}]` : s).join(' → ');
   ctx.fillText(stageStr, W / 2, 60);
 
   // Money display (top left)
@@ -420,6 +492,13 @@ function drawCare() {
     sfxClick();
     initTimeout();
     game.screen = 'timeout';
+  }
+
+  drawButton(10, 175, 125, 36, 'Trips', '#6a8', true, '🚗');
+  if (mouse.clicked && hitBox(mouse.x, mouse.y, 10, 175, 125, 36)) {
+    sfxClick();
+    game.travel = { phase: 'map', timer: 0, dest: null };
+    game.screen = 'travel';
   }
 
   // Activity buttons
@@ -535,7 +614,7 @@ function drawCare() {
   // Drag furniture or click-to-interact (wx = screen X + scroll, world space)
   if (game.screen === 'care') {
     const onButton = hitBox(mx, my, 10, 10, 250, 110) || hitBox(mx, my, W - 120, 10, 110, 35)
-      || hitBox(mx, my, 10, 130, 125, 36);
+      || hitBox(mx, my, 10, 130, 125, 36) || hitBox(mx, my, 10, 175, 125, 36);
 
     if (mouse.clicked && !onButton) {
       const doorX = 6, doorY = H * 0.29, doorW = 66, doorH = H * 0.46;
@@ -550,6 +629,18 @@ function drawCare() {
         sfxClick();
         game.careMode = null;
         game.screen = 'dressing';
+        mouse.clicked = false;
+      }
+      const cabX = HOME_ROOM_W * 2 + 22, cabY = H * 0.26, cabW = 58, cabH = 118;
+      if (wx >= cabX && wx <= cabX + cabW && my >= cabY && my <= cabY + cabH) {
+        sfxClick();
+        if (game.inventory.includes('cat_scoop')) {
+          game.equippedTool = game.equippedTool === 'scoop' ? null : 'scoop';
+          sfxEquip();
+          addFloat(wx, my - 18, game.equippedTool === 'scoop' ? 'Scoop equipped!' : 'Scoop put away', '#8d6');
+        } else {
+          addFloat(wx, my - 18, 'Get the free scoop in the Shop', '#888');
+        }
         mouse.clicked = false;
       }
     }
@@ -627,6 +718,42 @@ function drawCare() {
         sfxDash();
       }
       game.throwGrab = null;
+    }
+
+    // Touch drag-to-move on open floor (without keyboard)
+    const touchDragMove =
+      touchCtrl.isTouch &&
+      touchCtrl.uiId !== null &&
+      mouse.down &&
+      !onButton &&
+      !game.dragging &&
+      !game.laserActive &&
+      !game.throwGrab &&
+      !game.careMode;
+    if (touchDragMove) {
+      const inRoom = my > 70 && my < H - 90 && mx > 0 && mx < W - 150;
+      if (inRoom) {
+        const boxes = getFurnitureHitboxes();
+        let onFurniture = false;
+        for (const box of boxes) {
+          if (wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h) {
+            onFurniture = true;
+            break;
+          }
+        }
+        if (!onFurniture) {
+          const ai = game.catAI;
+          const dist = Math.hypot(wx - ai.x, my - ai.y);
+          if (dist > 12) {
+            ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, wx));
+            ai.targetY = Math.max(250, Math.min(H * 0.63, my));
+            ai._queuedBehavior = 'idle';
+            ai.state = 'walking';
+            ai.stateTimer = 99;
+            ai.nextStateTimer = 2;
+          }
+        }
+      }
     }
 
     // Click-to-interact (only if not dragging)
@@ -727,6 +854,13 @@ function drawCare() {
             }
           }
           if (clickedItem) {
+            if (clickedItem.toggleLamp) {
+              const lid = clickedItem.dragId;
+              game.furnitureLights[lid] = !isLampOn(lid);
+              sfxClick();
+              addFloat(wx, my - 14, isLampOn(lid) ? 'Lamp on' : 'Lamp off', '#ffe');
+              mouse.clicked = false;
+            } else {
             ai.targetX = clickedItem.targetX;
             ai.targetY = clickedItem.targetY;
             ai._queuedBehavior = clickedItem.behavior;
@@ -735,6 +869,7 @@ function drawCare() {
             ai.nextStateTimer = 8;
             addFloat(wx, my - 10, clickedItem.label, '#fff');
             sfxClick();
+            }
           } else {
             ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, wx));
             ai.targetY = Math.max(250, Math.min(H * 0.63, my));
@@ -763,7 +898,7 @@ function drawCare() {
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
         const tip = box.dragId === 'litterbox' && (game.litterboxDirt || 0) > 0.02
-          ? 'Scrub litter (drag)'
+          ? (game.equippedTool === 'scoop' && game.inventory.includes('cat_scoop') ? 'Scrub litter (drag)' : 'Equip scoop — Cat supplies')
           : `${box.label} (drag)`;
         ctx.fillText(tip, mx, my - 9);
         break;
@@ -797,7 +932,8 @@ function drawCare() {
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('← → scroll the house · Wheel / trackpad', W / 2, H - 14);
+  const moveHelp = touchCtrl.isTouch ? 'Drag on open floor to move · swipe to scroll' : '← → scroll the house · Wheel / trackpad';
+  ctx.fillText(moveHelp, W / 2, H - 14);
 
   // Interactive laser dot (world → screen)
   if (game.laserActive) {
@@ -859,14 +995,14 @@ function drawCare() {
 function checkGrowth() {
   const allDone = ACTIVITIES.every(a => game.care[a] >= MAX_PER_ACTIVITY);
   if (allDone) {
-    if (game.currentStage < 3) {
+    if (getCurrentCat() && getCurrentStage() < 3) {
       setTimeout(() => {
-        game.currentStage++;
+        game.currentCat.stage++;
         resetCare();
         sfxGrow();
         spawnConfetti(game.catAI.x, game.catAI.y - 30, 60);
-        addFloat(300, 250, `Grew into a ${STAGES[game.currentStage]}!`, '#fa0', { screen: true });
-        if (game.currentStage === 3) {
+        addFloat(300, 250, `Grew into a ${STAGES[getCurrentStage()]}!`, '#fa0', { screen: true });
+        if (getCurrentStage() === 3) {
           // Adult! Time for the chase
           setTimeout(() => {
             addFloat(300, 200, 'Time to run home!', '#f44', { screen: true });
@@ -884,7 +1020,7 @@ function checkGrowth() {
 function buyItem(item) {
   const price = typeof getStorePrice === 'function' ? getStorePrice(item) : item.price;
   if (item.growBoost && game.growBoostUsed) return;
-  if (item.growBoost && game.currentStage >= 3) {
+  if (item.growBoost && getCurrentStage() >= 3) {
     sfxNope();
     addFloat(400, 200, 'Already fully grown!', '#888', { screen: true });
     return;
@@ -895,12 +1031,12 @@ function buyItem(item) {
 
   if (item.growBoost) {
     game.growBoostUsed = true;
-    game.currentStage++;
+    game.currentCat.stage++;
     resetCare();
     sfxGrow();
     spawnConfetti(game.catAI.x, game.catAI.y - 30, 60);
-    addFloat(400, 200, `Now a ${STAGES[game.currentStage]}!`, '#fa0', { screen: true });
-    if (game.currentStage === 3) {
+    addFloat(400, 200, `Now a ${STAGES[getCurrentStage()]}!`, '#fa0', { screen: true });
+    if (getCurrentStage() === 3) {
       setTimeout(() => {
         addFloat(300, 200, 'Time to run home!', '#f44', { screen: true });
         setTimeout(() => {
@@ -936,9 +1072,17 @@ function buyItem(item) {
     if (!game.inventory.includes(item.id)) game.inventory.push(item.id);
     addFloat(400, 200, `${item.name} — equip in dressing room`, '#b8f', { screen: true });
   } else if (item.cat === 'furniture') {
+    if (item.supply) {
+      if (!game.inventory.includes(item.id)) game.inventory.push(item.id);
+      addFloat(400, 200, `${item.name} — open Cat supplies to equip`, '#8d6', { screen: true });
+      return;
+    }
     if (!game.furniture.includes(item.id)) game.furniture.push(item.id);
     if (!game.furniturePos[item.id] && typeof getNextFurnitureSpreadPosition === 'function') {
       game.furniturePos[item.id] = getNextFurnitureSpreadPosition();
+    }
+    if (item.id.startsWith('floor_lamp') && game.furnitureLights[item.id] === undefined) {
+      game.furnitureLights[item.id] = true;
     }
     const pos = game.furniturePos[item.id] || { x: 300, y: 350 };
     game.homeScrollX = Math.max(0, Math.min(HOME_TOTAL_W - W, pos.x - W * 0.35));

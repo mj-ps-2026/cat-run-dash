@@ -106,6 +106,8 @@ function getFurnitureHitboxes() {
     { id: 'couch_blue',  w: 100, h: 40, offy: -5, behavior: 'sitting', label: 'Blue Couch' },
     { id: 'litterbox',   w: 54, h: 42, offy: 2, behavior: 'sniffing', label: 'Litter Box' },
     { id: 'cat_tunnel',  w: 108, h: 48, offy: 0, behavior: 'playing', label: 'Tunnel' },
+    { id: 'floor_lamp_brass', w: 36, h: 110, offy: -35, behavior: 'looking', label: 'Floor Lamp', toggleLamp: true },
+    { id: 'floor_lamp_modern', w: 34, h: 108, offy: -34, behavior: 'looking', label: 'Floor Lamp', toggleLamp: true },
   ];
 
   defs.forEach(d => {
@@ -118,6 +120,7 @@ function getFurnitureHitboxes() {
       targetX: pos.x, targetY: Math.min(pos.y + 20, H * 0.63),
       label: d.label,
       dragId: d.id,
+      toggleLamp: d.toggleLamp,
     });
   });
 
@@ -191,6 +194,7 @@ function initCatAI() {
 
 function updateCatAI(dt) {
   const ai = game.catAI;
+  const currentStage = getCurrentStage();
 
   // Blink
   ai.blinkTimer -= dt;
@@ -235,7 +239,7 @@ function updateCatAI(dt) {
       maybeEmote(ai);
     } else {
       const chasing = game.laserActive || (game.thrownToy && !game.thrownToy.settled) || game.throwGrab;
-      const speed = (chasing ? 280 : 60) * STAGE_SCALE[game.currentStage];
+      const speed = (chasing ? 280 : 60) * STAGE_SCALE[currentStage];
       ai.x += (dx / dist) * speed * dt;
       ai.y += (dy / dist) * speed * dt;
       ai.facing = dx > 0 ? 1 : -1;
@@ -391,7 +395,10 @@ function pickNextBehavior(ai) {
 
 function drawCatBehavior() {
   const ai = game.catAI;
-  const s = STAGE_SCALE[game.currentStage];
+  const currentCat = getCurrentCat();
+  const currentStage = getCurrentStage();
+  if (!currentCat) return;
+  const s = STAGE_SCALE[currentStage];
 
   // Blink check — eyes briefly close every few seconds
   const isBlinking = ai.blinkTimer > 0 && ai.blinkTimer < 0.15;
@@ -405,7 +412,7 @@ function drawCatBehavior() {
     ctx.translate(ai.x, ai.y);
     ctx.scale(1.2, 0.7);
     ctx.translate(-ai.x, -ai.y);
-    drawCat(ai.x, ai.y + 8 * s, game.currentCat, game.currentStage, ai.facing, game.time * 0.3, false, true);
+    drawCat(ai.x, ai.y + 8 * s, currentCat.breed, currentStage, ai.facing, game.time * 0.3, false, true, currentCat.equipped, currentCat.look);
     ctx.restore();
 
     // Zzz animation
@@ -423,7 +430,7 @@ function drawCatBehavior() {
     }
   } else if (ai.state === 'scratching') {
     // Reaching up with claw lines
-    drawCat(ai.x, ai.y - 5 - Math.abs(Math.sin(game.time * 6)) * 5, game.currentCat, game.currentStage, ai.facing, game.time * 2, false, isBlinking);
+    drawCat(ai.x, ai.y - 5 - Math.abs(Math.sin(game.time * 6)) * 5, currentCat.breed, currentStage, ai.facing, game.time * 2, false, isBlinking, currentCat.equipped, currentCat.look);
     ctx.strokeStyle = 'rgba(200,200,200,0.5)';
     ctx.lineWidth = 1.5;
     for (let sl = 0; sl < 3; sl++) {
@@ -437,13 +444,13 @@ function drawCatBehavior() {
     ctx.globalAlpha = 1;
   } else if (ai.state === 'drinking' || ai.state === 'eating') {
     const bob = Math.sin(game.time * 5) * 3;
-    drawCat(ai.x, ai.y + bob, game.currentCat, game.currentStage, ai.facing, game.time, false, isBlinking);
+    drawCat(ai.x, ai.y + bob, currentCat.breed, currentStage, ai.facing, game.time, false, isBlinking, currentCat.equipped, currentCat.look);
   } else if (ai.state === 'grooming') {
     ctx.save();
     ctx.translate(ai.x, ai.y);
     ctx.rotate(Math.sin(game.time * 3) * 0.08);
     ctx.translate(-ai.x, -ai.y);
-    drawCat(ai.x, ai.y, game.currentCat, game.currentStage, ai.facing, game.time * 1.5, false, isBlinking);
+    drawCat(ai.x, ai.y, currentCat.breed, currentStage, ai.facing, game.time * 1.5, false, isBlinking, currentCat.equipped, currentCat.look);
     ctx.restore();
     if (Math.sin(game.time * 4) > 0.7) {
       ctx.fillStyle = '#fff';
@@ -453,33 +460,33 @@ function drawCatBehavior() {
     }
   } else if (ai.state === 'playing') {
     const playBounce = Math.abs(Math.sin(game.time * 5)) * 8 * s;
-    drawCat(ai.x + Math.sin(game.time * 3) * 5, ai.y - playBounce, game.currentCat, game.currentStage, Math.sin(game.time * 2) > 0 ? 1 : -1, game.time * 2, true, isBlinking);
+    drawCat(ai.x + Math.sin(game.time * 3) * 5, ai.y - playBounce, currentCat.breed, currentStage, Math.sin(game.time * 2) > 0 ? 1 : -1, game.time * 2, true, isBlinking, currentCat.equipped, currentCat.look);
   } else if (ai.state === 'tunneling') {
     ctx.save();
     ctx.translate(ai.x, ai.y + 14 * s);
     ctx.scale(1.05, 0.72);
     ctx.translate(-ai.x, -ai.y);
-    drawCat(ai.x, ai.y, game.currentCat, game.currentStage, ai.facing, game.time * 0.9, false, isBlinking);
+    drawCat(ai.x, ai.y, currentCat.breed, currentStage, ai.facing, game.time * 0.9, false, isBlinking, currentCat.equipped, currentCat.look);
     ctx.restore();
     ctx.fillStyle = 'rgba(40,25,20,0.25)';
     drawRoundRect(ai.x - 38, ai.y - 8, 76, 20, 8);
     ctx.fill();
   } else if (ai.state === 'watching') {
-    drawCat(ai.x, ai.y, game.currentCat, game.currentStage, ai.facing, game.time * 0.5, false, isBlinking);
+    drawCat(ai.x, ai.y, currentCat.breed, currentStage, ai.facing, game.time * 0.5, false, isBlinking, currentCat.equipped, currentCat.look);
   } else if (ai.state === 'sniffing') {
     const sniffBob = Math.sin(game.time * 6) * 2;
-    drawCat(ai.x + ai.facing * sniffBob, ai.y, game.currentCat, game.currentStage, ai.facing, game.time, false, isBlinking);
+    drawCat(ai.x + ai.facing * sniffBob, ai.y, currentCat.breed, currentStage, ai.facing, game.time, false, isBlinking, currentCat.equipped, currentCat.look);
   } else if (ai.state === 'sitting') {
-    drawCat(ai.x, ai.y + Math.sin(game.time * 1) * 1.5, game.currentCat, game.currentStage, ai.facing, game.time * 0.5, false, isBlinking);
+    drawCat(ai.x, ai.y + Math.sin(game.time * 1) * 1.5, currentCat.breed, currentStage, ai.facing, game.time * 0.5, false, isBlinking, currentCat.equipped, currentCat.look);
   } else if (ai.state === 'pooping') {
     ctx.save();
     ctx.translate(ai.x, ai.y);
     ctx.scale(1.06, 0.86);
     ctx.translate(-ai.x, -ai.y);
-    drawCat(ai.x, ai.y + 6 * s, game.currentCat, game.currentStage, ai.facing, game.time * 0.7, false, isBlinking);
+    drawCat(ai.x, ai.y + 6 * s, currentCat.breed, currentStage, ai.facing, game.time * 0.7, false, isBlinking, currentCat.equipped, currentCat.look);
     ctx.restore();
   } else {
-    drawCat(ai.x, ai.y, game.currentCat, game.currentStage, ai.facing, game.time, isWalking, isBlinking);
+    drawCat(ai.x, ai.y, currentCat.breed, currentStage, ai.facing, game.time, isWalking, isBlinking, currentCat.equipped, currentCat.look);
   }
 
   // Emote bubble
@@ -624,7 +631,7 @@ function drawHouseCats() {
       ctx.translate(st.x, st.y);
       ctx.scale(1.1, 0.7);
       ctx.translate(-st.x, -st.y);
-      drawCat(st.x, st.y + 4, cat.breed, 3, st.facing, game.time * 0.3 + idx, false, true);
+      drawCat(st.x, st.y + 4, cat.breed, 3, st.facing, game.time * 0.3 + idx, false, true, cat.equipped, cat.look);
       ctx.restore();
       // Mini zzz
       ctx.fillStyle = '#aaf';
@@ -639,16 +646,16 @@ function drawHouseCats() {
       ctx.translate(st.x, st.y);
       ctx.rotate(Math.sin(game.time * 3 + idx) * 0.06);
       ctx.translate(-st.x, -st.y);
-      drawCat(st.x, st.y, cat.breed, 3, st.facing, game.time + idx, false);
+      drawCat(st.x, st.y, cat.breed, 3, st.facing, game.time + idx, false, false, cat.equipped, cat.look);
       ctx.restore();
     } else {
-      drawCat(st.x, st.y, cat.breed, 3, st.facing, game.time + idx, isWalking);
+      drawCat(st.x, st.y, cat.breed, 3, st.facing, game.time + idx, isWalking, false, cat.equipped, cat.look);
     }
 
     // Name tag
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.font = '9px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(CAT_BREEDS[cat.breed].name, st.x, st.y + 25);
+    ctx.fillText(cat.name || CAT_BREEDS[cat.breed].name, st.x, st.y + 25);
   });
 }

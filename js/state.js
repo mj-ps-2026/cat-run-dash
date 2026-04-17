@@ -5,11 +5,10 @@
 // ============================================================
 
 let game = {
-  screen: 'title', // title, select, care, walk, chase, backyard, timeout, store, collection
+  screen: 'title', // title, avatar, select, care, walk, chase, backyard, timeout, store, collection, travel, dressing
   time: 0,
-  cats: [], // { breed: index, stage: 3 } completed cats
-  currentCat: null, // breed index
-  currentStage: 0,
+  cats: [], // completed cat instances
+  currentCat: null, // active cat instance
   care: { feed: 0, play: 0, brush: 0, water: 0, walk: 0, gather: 0 },
   // Care animation
   careAnim: null, // { type, timer, x, y }
@@ -26,7 +25,7 @@ let game = {
   // Store
   money: 10,
   inventory: [],       // accessory item ids owned
-  equipped: { head: null, neck: null, eyes: null, back: null }, // accessory slots
+  equipped: { head: null, neck: null, eyes: null, back: null }, // legacy save compatibility
   furniture: [],       // furniture item ids placed in home
   ownedToys: [],       // toy item ids (persist at home)
   houseCats: [],       // indices into game.cats that are visible at home
@@ -83,26 +82,103 @@ let game = {
   careMusicCalm: false,
   // Chill zone (playful time-out screen)
   timeout: { timer: 0, savedScroll: 0 },
+  // Player avatar (before choose-a-cat)
+  playerAvatar: { skin: 0, hair: 0, eyes: 0 },
+  // Floor lamp on/off per furniture id
+  furnitureLights: {},
+  // Cat supplies: scoop must be equipped to scrub litter
+  equippedTool: null, // 'scoop' | null
+  // Trip map: car animation + destination
+  travel: { phase: 'map', timer: 0, dest: null },
 };
 
 function resetCare() {
   game.care = { feed: 0, play: 0, brush: 0, water: 0, walk: 0, gather: 0 };
 }
 
+function createEmptyEquipped() {
+  return { head: null, neck: null, eyes: null, back: null };
+}
+
+function nextCatId() {
+  game._catUid = (game._catUid || 0) + 1;
+  return `cat_${game._catUid}`;
+}
+
+function normalizeEquipped(equipped) {
+  return Object.assign(createEmptyEquipped(), equipped || {});
+}
+
+function createCatInstance(breed, opts) {
+  const data = opts || {};
+  return {
+    id: data.id || nextCatId(),
+    breed,
+    stage: data.stage || 0,
+    name: data.name || CAT_BREEDS[breed].name,
+    gender: data.gender || 'girl',
+    equipped: normalizeEquipped(data.equipped),
+    look: data.look || { fur: 0, nose: 0, eyes: 0 },
+  };
+}
+
+function ensureCatInstance(cat, fallbackBreed, fallbackStage, fallbackEquipped) {
+  if (!cat && fallbackBreed === null) return null;
+  const breed = cat && cat.breed !== undefined ? cat.breed : fallbackBreed;
+  if (breed === null || breed === undefined) return null;
+  return createCatInstance(breed, {
+    id: cat && cat.id,
+    stage: cat && cat.stage !== undefined ? cat.stage : (fallbackStage || 0),
+    name: cat && cat.name,
+    gender: cat && cat.gender,
+    equipped: (cat && cat.equipped) || fallbackEquipped,
+    look: cat && cat.look,
+  });
+}
+
+function getCurrentCat() {
+  return game.currentCat;
+}
+
+function getCurrentBreedIndex() {
+  const cat = getCurrentCat();
+  return cat ? cat.breed : null;
+}
+
+function getCurrentStage() {
+  const cat = getCurrentCat();
+  return cat ? cat.stage : 0;
+}
+
+function getCurrentCatName() {
+  const cat = getCurrentCat();
+  if (!cat) return '';
+  return cat.name || CAT_BREEDS[cat.breed].name;
+}
+
+function getCurrentCatLabel() {
+  const cat = getCurrentCat();
+  if (!cat) return '';
+  const genderLabel = cat.gender === 'boy' ? 'Boy' : 'Girl';
+  return `${getCurrentCatName()} (${genderLabel})`;
+}
+
+function getCurrentEquipped() {
+  const cat = getCurrentCat();
+  if (!cat) return createEmptyEquipped();
+  cat.equipped = normalizeEquipped(cat.equipped);
+  return cat.equipped;
+}
+
 function hasUnlockedSecretBreeds() {
-  if (!game.cats || game.cats.length < NUM_BASE_CAT_BREEDS) return false;
-  const breeds = new Set(game.cats.map(c => c.breed));
-  for (let b = 0; b < NUM_BASE_CAT_BREEDS; b++) {
-    if (!breeds.has(b)) return false;
-  }
-  return true;
+  return !!(game.cats && game.cats.length >= 6);
 }
 
 // ============================================================
 // SAVE / LOAD (localStorage)
 // ============================================================
 const SAVE_KEY = 'catRunDash_save';
-const SAVE_FIELDS = ['cats', 'currentCat', 'currentStage', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX', 'eggHuntRewardClaimed', 'modPackUnlocked', 'growBoostUsed'];
+const SAVE_FIELDS = ['cats', 'currentCat', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX', 'eggHuntRewardClaimed', 'modPackUnlocked', 'growBoostUsed', '_catUid', 'playerAvatar', 'furnitureLights', 'equippedTool'];
 
 function saveGame() {
   try {
@@ -110,7 +186,7 @@ function saveGame() {
     SAVE_FIELDS.forEach(k => { data[k] = game[k]; });
     data.screen = game.screen;
     // Don't save mid-chase or mid-walk — save as care screen
-    if (data.screen === 'walk' || data.screen === 'chase' || data.screen === 'backyard' || data.screen === 'timeout' || data.screen === 'dressing') data.screen = 'care';
+    if (data.screen === 'walk' || data.screen === 'chase' || data.screen === 'backyard' || data.screen === 'timeout' || data.screen === 'dressing' || data.screen === 'travel') data.screen = 'care';
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch (e) { /* storage full or unavailable — silently ignore */ }
 }
@@ -126,6 +202,24 @@ function loadGame() {
     if (data.eggHuntRewardClaimed === undefined) game.eggHuntRewardClaimed = false;
     if (data.modPackUnlocked === undefined) game.modPackUnlocked = false;
     if (data.growBoostUsed === undefined) game.growBoostUsed = false;
+    if (data.playerAvatar && typeof data.playerAvatar === 'object') game.playerAvatar = data.playerAvatar;
+    if (data.furnitureLights && typeof data.furnitureLights === 'object') game.furnitureLights = data.furnitureLights;
+    if (data.equippedTool !== undefined) game.equippedTool = data.equippedTool;
+    game.cats = (game.cats || []).map(cat => ensureCatInstance(cat, cat && cat.breed, cat && cat.stage, data.equipped));
+    game.currentCat = ensureCatInstance(game.currentCat, typeof data.currentCat === 'number' ? data.currentCat : null, data.currentStage || 0, data.equipped);
+    game.equipped = normalizeEquipped(game.equipped);
+    const seenIds = new Set();
+    game.cats.forEach(cat => {
+      while (seenIds.has(cat.id)) cat.id = nextCatId();
+      seenIds.add(cat.id);
+    });
+    if (game.currentCat) {
+      while (seenIds.has(game.currentCat.id)) game.currentCat.id = nextCatId();
+      seenIds.add(game.currentCat.id);
+    }
+    if (!game._catUid) {
+      game._catUid = game.cats.length + (game.currentCat ? 1 : 0);
+    }
     // Restore screen (default to care if a cat exists, else title)
     if (data.screen === 'care' || data.screen === 'store' || data.screen === 'collection' || data.screen === 'dressing') {
       game.screen = data.screen;
