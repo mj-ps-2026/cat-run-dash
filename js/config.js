@@ -204,7 +204,6 @@ const STORE_ITEMS = [
   { id: 'couch_blue',   cat: 'furniture', name: 'Blue Couch',      price: 12, icon: '🛋️', desc: 'Cool comfort' },
   { id: 'litterbox',    cat: 'furniture', name: 'Litter Box',      price: 0,  icon: '📦', desc: 'Keeps poops contained' },
   { id: 'cat_tunnel',   cat: 'furniture', name: 'Cat Tunnel',      price: 14, icon: '🌀', desc: 'Peek & zoom' },
-  { id: 'cat_scoop',    cat: 'furniture', name: 'Cat Scoop',       price: 0,  icon: '🪮', desc: 'Free — equip from Cat supplies', supply: true },
   { id: 'floor_lamp_brass',  cat: 'furniture', name: 'Brass Floor Lamp',  price: 22, icon: '💡', desc: 'Tap at home to turn on/off' },
   { id: 'floor_lamp_modern', cat: 'furniture', name: 'Modern Floor Lamp', price: 24, icon: '🔦', desc: 'Tap at home to turn on/off' },
 ];

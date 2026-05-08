@@ -32,3 +32,8 @@
 [x] Fun reaction when the critter gets caught
 
 [x] We want to introduce player avatars with an avatar creator. This is a new workflow coming before the selection of a cat
+
+
+[.] I want in cat supply you Drag the scooper to the letterbox and Bring it back
+[ ] Add a cafe
+[ ] Make different locations more different (add a cafe)

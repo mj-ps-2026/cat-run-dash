@@ -57,7 +57,7 @@ function drawTitle() {
   if (mouse.clicked && hitBox(mouse.x, mouse.y, W / 2 - 90, 440, 180, 55)) {
     sfxClick();
     audioCtx.resume();
-    game.screen = 'avatar';
+    game.screen = 'avatarname';
   }
 
   // Cat collection count
@@ -78,4 +78,15 @@ function drawTitle() {
   ctx.font = '12px sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText('Made by Cora', W - 15, H - 12);
+
+  // Reset button
+  drawButton(15, H - 38, 90, 28, 'Reset', '#a55', true);
+  if (mouse.clicked && hitBox(mouse.x, mouse.y, 15, H - 38, 90, 28)) {
+    mouse.clicked = false;
+    if (confirm('Reset everything? All cats and progress will be lost!')) {
+      try { localStorage.removeItem('catRunDash_save'); } catch (e) {}
+      game.screen = 'title';
+      location.reload();
+    }
+  }
 }

@@ -63,7 +63,9 @@ let game = {
   litterboxDirt: 0,       // 0–1 fills slowly when cat uses litter box
   litterboxClumps: 0,     // visible deposits (increments each use; scooping reduces)
   homeScrollX: 0,       // care screen horizontal scroll (0 .. HOME_TOTAL_W - W)
-  litterScrub: null,    // { lx, ly } world coords while scrubbing litter tray
+  // Scooper drag & shake cleaning
+  scoopDragging: null,  // { x, y } world coords when dragging scooper
+  litterCleaning: null, // { progress, lastShakeX } during shake cleaning
   // Confetti
   confetti: [],
   // Backyard (door from care) + optional egg hunt
@@ -86,8 +88,7 @@ let game = {
   playerAvatar: { skin: 0, hair: 0, eyes: 0 },
   // Floor lamp on/off per furniture id
   furnitureLights: {},
-  // Cat supplies: scoop must be equipped to scrub litter
-  equippedTool: null, // 'scoop' | null
+  // Cat supplies: scoop must be equipped to scrub litter (removed - now bundled with litterbox)
   // Trip map: car animation + destination
   travel: { phase: 'map', timer: 0, dest: null },
 };
@@ -178,7 +179,7 @@ function hasUnlockedSecretBreeds() {
 // SAVE / LOAD (localStorage)
 // ============================================================
 const SAVE_KEY = 'catRunDash_save';
-const SAVE_FIELDS = ['cats', 'currentCat', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX', 'eggHuntRewardClaimed', 'modPackUnlocked', 'growBoostUsed', '_catUid', 'playerAvatar', 'furnitureLights', 'equippedTool'];
+const SAVE_FIELDS = ['cats', 'currentCat', 'care', 'money', 'inventory', 'equipped', 'furniture', 'ownedToys', 'houseCats', 'furniturePos', 'floorPoops', 'litterboxDirt', 'litterboxClumps', 'homeScrollX', 'eggHuntRewardClaimed', 'modPackUnlocked', 'growBoostUsed', '_catUid', 'playerAvatar', 'furnitureLights', 'scoopDragging', 'litterCleaning'];
 
 function saveGame() {
   try {
@@ -204,7 +205,8 @@ function loadGame() {
     if (data.growBoostUsed === undefined) game.growBoostUsed = false;
     if (data.playerAvatar && typeof data.playerAvatar === 'object') game.playerAvatar = data.playerAvatar;
     if (data.furnitureLights && typeof data.furnitureLights === 'object') game.furnitureLights = data.furnitureLights;
-    if (data.equippedTool !== undefined) game.equippedTool = data.equippedTool;
+    if (data.scoopDragging === undefined) game.scoopDragging = null;
+    if (data.litterCleaning === undefined) game.litterCleaning = null;
     game.cats = (game.cats || []).map(cat => ensureCatInstance(cat, cat && cat.breed, cat && cat.stage, data.equipped));
     game.currentCat = ensureCatInstance(game.currentCat, typeof data.currentCat === 'number' ? data.currentCat : null, data.currentStage || 0, data.equipped);
     game.equipped = normalizeEquipped(game.equipped);

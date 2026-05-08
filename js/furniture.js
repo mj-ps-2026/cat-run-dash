@@ -5,6 +5,11 @@ function getFurnitureXY(id) {
   return game.furniturePos[id] || FURNITURE_DEFAULTS[id] || { x: 300, y: 350 };
 }
 
+function getScooperXY() {
+  const lp = getFurnitureXY('litterbox');
+  return { x: lp.x + 38, y: lp.y + 8 };
+}
+
 function getToyXY(idx) {
   const key = `toy_${idx}`;
   if (game.furniturePos[key]) return game.furniturePos[key];
@@ -521,6 +526,12 @@ function drawFurniture() {
     ctx.lineWidth = 1;
     drawRoundRect(lx - 24, ly - 6, 48, 30, 5);
     ctx.stroke();
+    // Docked scooper (shown when not being dragged or cleaning)
+    if (!game.scoopDragging && !game.litterCleaning) {
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🪮', lx + 38, ly + 8);
+    }
   }); }
   if (owned.includes('fountain_gold')) { withOffset('fountain_gold', () => {
     const fx = 100, fy = H * 0.58;

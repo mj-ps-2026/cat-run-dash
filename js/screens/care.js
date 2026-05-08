@@ -67,7 +67,7 @@ function updateCare(dt) {
       game._carePanLastX = undefined;
     }
     // Desktop: hold on floor to steer cat (same mechanic as walk/backyard)
-    if (!touchCtrl.isTouch && mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
+    if (!touchCtrl.isTouch && mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode && !game.scoopDragging && !game.litterCleaning) {
       const mx = mouse.x, my = mouse.y;
       const sx = game.homeScrollX || 0;
       const wx = mx + sx;
@@ -102,35 +102,7 @@ function updateCare(dt) {
     }
   }
 
-  // Litter scrub: drag inside tray surface to reduce dirt (clumps follow dirt)
-  if (game.screen === 'care' && game.furniture.includes('litterbox')) {
-    const d0 = game.litterboxDirt || 0;
-    const sx = game.homeScrollX || 0;
-    const wx = mouse.x + sx;
-    const my = mouse.y;
-    const lp = getFurnitureXY('litterbox');
-    const tx = lp.x - 22, ty = lp.y - 4, tw = 44, th = 26;
-    const inTray = wx >= tx && wx <= tx + tw && my >= ty && my <= ty + th;
-    const canScoop = game.inventory.includes('cat_scoop') && game.equippedTool === 'scoop';
-    if (d0 > 0.02 && inTray && mouse.down && canScoop && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
-      if (!game.litterScrub) game.litterScrub = { lx: wx, ly: my };
-      else {
-        const dist = Math.hypot(wx - game.litterScrub.lx, my - game.litterScrub.ly);
-        if (dist > 0) {
-          game.litterboxDirt = Math.max(0, game.litterboxDirt - dist * 0.00115);
-          game.litterboxClumps = getVisibleLitterClumps();
-          game.litterScrub.lx = wx;
-          game.litterScrub.ly = my;
-        }
-      }
-      if (game.litterboxDirt < 0.028) {
-        game.litterboxDirt = 0;
-        game.litterboxClumps = 0;
-      }
-    } else if (!mouse.down) {
-      game.litterScrub = null;
-    }
-  }
+  // Scooper drag & shake cleaning - implemented in step 5
 
   // Throwable grab — keep aim in world space (same frame as AI chase)
   if (game.throwGrab && mouse.down && game.screen === 'care') {
@@ -263,7 +235,7 @@ function updateCare(dt) {
   }
 }
 
-function drawCare() {
+function drawCare(dt) {
   const currentStage = getCurrentStage();
   const sx = game.homeScrollX || 0;
   const mx = mouse.x, my = mouse.y;
@@ -274,6 +246,33 @@ function drawCare() {
   ctx.translate(-sx, 0);
   drawHomeBg();
   drawFurniture();
+
+  // Draw dragged scooper (in screen coordinates via ctx.translate)
+  if (game.scoopDragging) {
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🪮', game.scoopDragging.x, game.scoopDragging.y + 6);
+  }
+  // Draw cleaning scooper (positioned on litterbox)
+  if (game.litterCleaning) {
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🪮', game.litterCleaning.x, game.litterCleaning.y + 6);
+    // Progress bar based on clumps remaining
+    const totalClumps = game.litterCleaning.startClumps || 1;
+    const remainingClumps = game.litterboxClumps || 0;
+    const pg = Math.max(0, 1 - remainingClumps / Math.max(1, totalClumps));
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    drawRoundRect(game.litterCleaning.x - 20, game.litterCleaning.y - 25, 40, 6, 3);
+    ctx.fill();
+    ctx.fillStyle = '#8d6';
+    drawRoundRect(game.litterCleaning.x - 19, game.litterCleaning.y - 24, 38 * pg, 4, 2);
+    ctx.fill();
+    // Shake hint
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Shake!', game.litterCleaning.x, game.litterCleaning.y - 32);
+  }
 
   // Backyard door (living room, left wall)
   ctx.fillStyle = '#4a6a40';
@@ -309,28 +308,6 @@ function drawCare() {
   ctx.font = 'bold 10px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Dress', dressX + 28, H * 0.36);
-
-  // Kitchen: Cat supplies (equip free scoop for litter)
-  const cabX = HOME_ROOM_W * 2 + 22, cabY = H * 0.26;
-  ctx.fillStyle = '#9a8068';
-  drawRoundRect(cabX, cabY, 58, 118, 6);
-  ctx.fill();
-  ctx.strokeStyle = '#5a4838';
-  ctx.lineWidth = 2;
-  drawRoundRect(cabX, cabY, 58, 118, 6);
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(0,0,0,0.1)';
-  drawRoundRect(cabX + 6, cabY + 10, 46, 52, 3);
-  ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 9px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Cat', cabX + 29, cabY + 28);
-  ctx.fillText('supplies', cabX + 29, cabY + 40);
-  if (game.equippedTool === 'scoop') {
-    ctx.font = '22px sans-serif';
-    ctx.fillText('🪮', cabX + 29, cabY + 98);
-  }
 
   // Floor poops (click to clean)
   if (game.floorPoops && game.floorPoops.length > 0) {
@@ -611,6 +588,128 @@ function drawCare() {
     game.screen = 'collection';
   }
 
+// Scooper drag & shake cleaning
+  const hasLitterbox = game.furniture && game.furniture.includes('litterbox');
+  const litterDirt = game.litterboxDirt || 0;
+  const lp = getFurnitureXY('litterbox');
+  const scrollX = game.homeScrollX || 0;
+  const lpScreen = lp.x - scrollX;
+
+  // Draw scooper hover hint and handle drag
+  if (game.screen === 'care' && hasLitterbox && litterDirt > 0.02) {
+    const scooperArea = { x: lpScreen + 25, y: lp.y - 10, w: 35, h: 50 };
+    const onScooperArea = mx >= scooperArea.x && mx <= scooperArea.x + scooperArea.w &&
+                         my >= scooperArea.y && my <= scooperArea.y + scooperArea.h;
+
+    if (onScooperArea) {
+      ctx.strokeStyle = 'rgba(255,255,0,0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      drawRoundRect(scooperArea.x, scooperArea.y, scooperArea.w, scooperArea.h, 6);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Start dragging scooper on mouse DOWN (not clicked)
+    const isStartingDrag = mouse.down && !game.scoopDragging && onScooperArea;
+    if (isStartingDrag && !game.dragging) {
+      sfxClick();
+      const sxWorld = lp.x + 38;
+      const syWorld = lp.y + 8;
+      game.scoopDragging = { startX: sxWorld, startY: syWorld, x: mx + scrollX, y: my };
+    }
+
+    // Update scooper position while dragging
+    if (game.scoopDragging && mouse.down) {
+      game.scoopDragging.x = mx + scrollX;
+      game.scoopDragging.y = my;
+    }
+
+    // While dragging, check if over litterbox to start cleaning
+    if (game.scoopDragging && mouse.down) {
+      const dragX = game.scoopDragging.x;
+      const dragY = game.scoopDragging.y;
+      const lx = lp.x, ly = lp.y;
+      const overBox = dragX >= lx - 28 && dragX <= lx + 28 && dragY >= ly - 10 && dragY <= ly + 30;
+
+      if (overBox && !game.litterCleaning) {
+        game.litterCleaning = {
+          progress: 0,
+          lastShakeX: dragX,
+          x: dragX,
+          y: dragY,
+          startClumps: game.litterboxClumps || 0,
+          startDirt: game.litterboxDirt || 0
+        };
+        console.log('CLEANING STARTED (while dragging):', game.litterCleaning);
+        sfxEquip();
+      }
+    }
+
+    // Drop scooper - if NOT on litterbox, return to dock
+    if (game.scoopDragging && !mouse.down) {
+      const dropX = game.scoopDragging.x;
+      const dropY = game.scoopDragging.y;
+      const lx = lp.x, ly = lp.y;
+      const onBox = dropX >= lx - 28 && dropX <= lx + 28 && dropY >= ly - 10 && dropY <= ly + 30;
+      console.log('SCOOPER DROP:', { dropX, dropY, lx, ly, onBox, clumps: game.litterboxClumps, dirt: game.litterboxDirt });
+
+      if (!onBox) {
+        // Return scooper to dock
+        game.scoopDragging = null;
+      }
+    }
+
+    // Shaking while cleaning (track mouse position even after mouse release to show docked scooper)
+    if (game.litterCleaning) {
+      game.litterCleaning.x = mx + scrollX;
+      game.litterCleaning.y = my;
+      // Only process shakes while mouse is held
+      if (mouse.down) {
+        const shakeX = game.litterCleaning.x;
+        const lastX = game.litterCleaning.lastShakeX;
+        const shakeVel = Math.abs(shakeX - lastX);
+
+        if (shakeVel > 15) {
+          // Check if scooper is over litterbox
+          const lx = lp.x, ly = lp.y;
+          const onLitterbox = shakeX >= lx - 28 && shakeX <= lx + 28 && game.litterCleaning.y >= ly - 10 && game.litterCleaning.y <= ly + 30;
+          console.log('SHAKE:', { shakeX, shakeVel, lx, ly, gameY: game.litterCleaning.y, onLitterbox });
+
+          if (onLitterbox) {
+            // Initialize timer on first shake
+            if (!game.litterCleaning.lastCleanTime) {
+              game.litterCleaning.lastCleanTime = 0;
+            }
+            // Every 500ms, clean one clump
+            game.litterCleaning.lastCleanTime += dt;
+            if (game.litterCleaning.lastCleanTime >= 0.5) {
+              game.litterCleaning.lastCleanTime = 0;
+              if (game.litterboxClumps > 0) {
+                game.litterboxClumps--;
+              }
+              if (game.litterboxDirt > 0) {
+                game.litterboxDirt = Math.max(0, game.litterboxDirt - 0.1);
+              }
+              console.log('CLEANED:', { clumps: game.litterboxClumps, dirt: game.litterboxDirt });
+            }
+          }
+          game.litterCleaning.lastShakeX = shakeX;
+
+          // Done cleaning when clean
+          if (game.litterboxClumps <= 0 && (game.litterboxDirt || 0) <= 0) {
+            game.litterboxDirt = 0;
+            game.litterboxClumps = 0;
+            game.litterCleaning = null;
+            addFloat(lp.x, lp.y - 30, 'Clean! 💖', '#8d6');
+          }
+        }
+      }
+    } else if (game.litterCleaning && !mouse.down) {
+      game.litterCleaning = null;
+    }
+  }
+
   // Drag furniture or click-to-interact (wx = screen X + scroll, world space)
   if (game.screen === 'care') {
     const onButton = hitBox(mx, my, 10, 10, 250, 110) || hitBox(mx, my, W - 120, 10, 110, 35)
@@ -629,18 +728,6 @@ function drawCare() {
         sfxClick();
         game.careMode = null;
         game.screen = 'dressing';
-        mouse.clicked = false;
-      }
-      const cabX = HOME_ROOM_W * 2 + 22, cabY = H * 0.26, cabW = 58, cabH = 118;
-      if (wx >= cabX && wx <= cabX + cabW && my >= cabY && my <= cabY + cabH) {
-        sfxClick();
-        if (game.inventory.includes('cat_scoop')) {
-          game.equippedTool = game.equippedTool === 'scoop' ? null : 'scoop';
-          sfxEquip();
-          addFloat(wx, my - 18, game.equippedTool === 'scoop' ? 'Scoop equipped!' : 'Scoop put away', '#8d6');
-        } else {
-          addFloat(wx, my - 18, 'Get the free scoop in the Shop', '#888');
-        }
         mouse.clicked = false;
       }
     }
@@ -667,7 +754,7 @@ function drawCare() {
 
     // Start drag on mousedown — special toys: laser, throwables
     const THROWABLE_TOYS = ['yarn', 'bell', 'mousetoy', 'fish_toy'];
-    if (mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode) {
+    if (mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode && !game.scoopDragging && !game.litterCleaning) {
       const boxes = getFurnitureHitboxes();
       for (const box of boxes) {
         if (box.dragId && wx >= box.x && wx <= box.x + box.w && my >= box.y && my <= box.y + box.h && !onButton) {
@@ -757,7 +844,7 @@ function drawCare() {
     }
 
     // Click-to-interact (only if not dragging)
-    if (mouse.clicked && !game.dragging) {
+    if (mouse.clicked && !game.dragging && !game.scoopDragging && !game.litterCleaning) {
       const inRoom = my > 70 && my < H - 90 && mx > 0 && mx < W - 150;
       if (inRoom && !onButton) {
         let skipRoomInteract = false;
@@ -898,7 +985,7 @@ function drawCare() {
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
         const tip = box.dragId === 'litterbox' && (game.litterboxDirt || 0) > 0.02
-          ? (game.equippedTool === 'scoop' && game.inventory.includes('cat_scoop') ? 'Scrub litter (drag)' : 'Equip scoop — Cat supplies')
+          ? 'Drag scooper to clean'
           : `${box.label} (drag)`;
         ctx.fillText(tip, mx, my - 9);
         break;

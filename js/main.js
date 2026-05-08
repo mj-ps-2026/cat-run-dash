@@ -17,6 +17,9 @@ function gameLoop(timestamp) {
       updateTitle(dt);
       drawTitle();
       break;
+    case 'avatarname':
+      drawAvatarName();
+      break;
     case 'avatar':
       drawAvatar();
       break;
@@ -25,7 +28,7 @@ function gameLoop(timestamp) {
       break;
     case 'care':
       updateCare(dt);
-      drawCare();
+      drawCare(dt);
       break;
     case 'walk':
       updateWalk(dt);

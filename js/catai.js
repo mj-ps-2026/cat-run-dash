@@ -113,8 +113,10 @@ function getFurnitureHitboxes() {
   defs.forEach(d => {
     if (!owned.includes(d.id)) return;
     const pos = getFurnitureXY(d.id);
+    const offx = d.offx || 0;
+    const offy = d.offy || 0;
     boxes.push({
-      x: pos.x - d.w / 2, y: pos.y + (d.offy || 0) - d.h / 2,
+      x: pos.x + offx - d.w / 2, y: pos.y + offy - d.h / 2,
       w: d.w, h: d.h,
       behavior: d.behavior,
       targetX: pos.x, targetY: Math.min(pos.y + 20, H * 0.63),

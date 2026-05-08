@@ -1,7 +1,7 @@
 // screens/select.js — Cat selection + name + look customization
 // Depends on: game state, drawing utils, drawCat, drawHomeBg, sfx, initCatAI
 
-const selectFlow = { step: 'breed', breed: null, name: '', gender: 'girl', fur: 0, nose: 0, eyes: 0 };
+const selectFlow = { step: 'name', breed: 0, name: '', gender: 'girl', fur: 0, nose: 0, eyes: 0 };
 
 (function bindSelectKeys() {
   if (typeof window === 'undefined' || window._selectKeyBound) return;
@@ -20,10 +20,11 @@ const selectFlow = { step: 'breed', breed: null, name: '', gender: 'girl', fur: 
 
 function drawSelect() {
   if (game._freshSelect) {
-    selectFlow.step = 'breed';
-    selectFlow.breed = null;
-    selectFlow.name = '';
-    selectFlow.gender = 'girl';
+    const pa = game.playerAvatar || {};
+    selectFlow.step = 'setup';
+    selectFlow.breed = 0;
+    selectFlow.name = (pa.name || '').trim() || 'Cat';
+    selectFlow.gender = pa.gender || 'girl';
     selectFlow.fur = 0;
     selectFlow.nose = 0;
     selectFlow.eyes = 0;
@@ -32,77 +33,6 @@ function drawSelect() {
   setBgMusicTheme('select');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
   drawHomeBg();
-
-  if (selectFlow.step === 'breed') {
-    ctx.fillStyle = '#6a4';
-    ctx.font = 'bold 36px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.strokeStyle = '#384';
-    ctx.lineWidth = 4;
-    ctx.strokeText('Choose Your Cat!', W / 2, 60);
-    ctx.fillText('Choose Your Cat!', W / 2, 60);
-
-    const visible = [];
-    for (let i = 0; i < CAT_BREEDS.length; i++) {
-      if (CAT_BREEDS[i].secret && !hasUnlockedSecretBreeds()) continue;
-      visible.push(i);
-    }
-
-    const cols = 3;
-    const cardW = 180, cardH = 180;
-    const startX = (W - cols * cardW - (cols - 1) * 20) / 2;
-    const startY = 90;
-
-    for (let vi = 0; vi < visible.length; vi++) {
-      const i = visible[vi];
-      const row = Math.floor(vi / cols);
-      const col = vi % cols;
-      const cx = startX + col * (cardW + 20);
-      const cy = startY + row * (cardH + 15);
-
-      const hover = hitBox(mouse.x, mouse.y, cx, cy, cardW, cardH);
-
-      ctx.fillStyle = hover ? '#fff8f0' : '#fff5e8';
-      ctx.strokeStyle = hover ? '#f4a442' : '#ddd';
-      ctx.lineWidth = hover ? 3 : 2;
-      drawRoundRect(cx, cy, cardW, cardH, 12);
-      ctx.fill();
-      ctx.stroke();
-
-      drawCat(cx + cardW / 2, cy + cardH / 2 - 10, i, 0, 1, game.time, false);
-
-      ctx.fillStyle = '#555';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(CAT_BREEDS[i].name, cx + cardW / 2, cy + cardH - 15);
-
-      if (mouse.clicked && hover) {
-        sfxMeow();
-        selectFlow.breed = i;
-        selectFlow.name = CAT_BREEDS[i].name;
-        selectFlow.gender = 'girl';
-        selectFlow.fur = i % CAT_LOOK_FUR.length;
-        selectFlow.nose = 0;
-        selectFlow.eyes = i % CAT_LOOK_EYES.length;
-        selectFlow.step = 'name';
-        mouse.clicked = false;
-      }
-    }
-
-    drawButton(20, H - 52, 120, 40, 'Back', '#636e72', true);
-    if (mouse.clicked && hitBox(mouse.x, mouse.y, 20, H - 52, 120, 40)) {
-      sfxClick();
-      game.screen = 'avatar';
-    }
-
-    if (CAT_BREEDS.some(b => b.secret) && !hasUnlockedSecretBreeds()) {
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Collect 6 cats total to unlock magical breeds ✨', W / 2, H - 36);
-    }
-    return;
-  }
 
   if (selectFlow.step === 'name') {
     ctx.fillStyle = '#6a4';
@@ -180,64 +110,114 @@ function drawSelect() {
       const nm = (selectFlow.name || '').trim() || CAT_BREEDS[selectFlow.breed].name;
       selectFlow.name = nm;
       sfxClick();
-      selectFlow.step = 'customize';
+      selectFlow.step = 'setup';
       mouse.clicked = false;
     }
 
-    drawButton(20, H - 52, 140, 40, '← Breeds', '#636e72', true);
-    if (mouse.clicked && hitBox(mouse.x, mouse.y, 20, H - 52, 140, 40)) {
+    drawButton(20, H - 52, 120, 40, 'Back', '#636e72', true);
+    if (mouse.clicked && hitBox(mouse.x, mouse.y, 20, H - 52, 120, 40)) {
       sfxClick();
-      selectFlow.step = 'breed';
-      mouse.clicked = false;
+      game.screen = 'avatarname';
     }
     return;
   }
 
-  if (selectFlow.step === 'customize') {
+  if (selectFlow.step === 'setup') {
     ctx.fillStyle = '#6a4';
     ctx.font = 'bold 26px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Fur, nose & eyes', W / 2, 48);
+    ctx.fillText('Choose breed & customize', W / 2, 38);
 
-    drawCat(W / 2, 200, selectFlow.breed, 0, 1, game.time, false, false, createEmptyEquipped(), {
+    const visible = [];
+    for (let i = 0; i < CAT_BREEDS.length; i++) {
+      if (CAT_BREEDS[i].secret && !hasUnlockedSecretBreeds()) continue;
+      visible.push(i);
+    }
+
+    const breedCardW = 80, breedCardH = 80;
+    const breedsPerRow = 4;
+    const breedStartX = (W - breedsPerRow * breedCardW - (breedsPerRow - 1) * 8) / 2;
+    const breedY = 55;
+
+    for (let vi = 0; vi < visible.length; vi++) {
+      const i = visible[vi];
+      const col = vi % breedsPerRow;
+      const row = Math.floor(vi / breedsPerRow);
+      const cx = breedStartX + col * (breedCardW + 8);
+      const cy = breedY + row * (breedCardH + 8);
+      const hover = hitBox(mouse.x, mouse.y, cx, cy, breedCardW, breedCardH);
+      const selected = selectFlow.breed === i;
+
+      ctx.fillStyle = selected ? '#ffe0b0' : (hover ? '#fff8f0' : '#fff5e8');
+      ctx.strokeStyle = selected ? '#f4a442' : (hover ? '#f4a442' : '#ddd');
+      ctx.lineWidth = selected ? 3 : 2;
+      drawRoundRect(cx, cy, breedCardW, breedCardH, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      drawCat(cx + breedCardW / 2, cy + breedCardH / 2 - 5, i, 0, 0.45, game.time, false);
+
+      if (mouse.clicked && hover) {
+        sfxClick();
+        selectFlow.breed = i;
+        selectFlow.fur = i % CAT_LOOK_FUR.length;
+        selectFlow.nose = 0;
+        selectFlow.eyes = i % CAT_LOOK_EYES.length;
+        mouse.clicked = false;
+      }
+    }
+
+    if (CAT_BREEDS.some(b => b.secret) && !hasUnlockedSecretBreeds()) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Collect 6 cats to unlock magical breeds ✨', W / 2, breedY + 2 * (breedCardH + 8) + 12);
+    }
+
+    drawCat(W / 2, 280, selectFlow.breed, 0, 1, game.time, false, false, createEmptyEquipped(), {
       fur: selectFlow.fur,
       nose: selectFlow.nose,
       eyes: selectFlow.eyes,
     });
 
+    ctx.fillStyle = '#444';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(CAT_BREEDS[selectFlow.breed].name, W / 2, 380);
+
     const row = (label, n, key, y) => {
       ctx.fillStyle = '#555';
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(label, 80, y);
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(label, 70, y);
       for (let i = 0; i < n; i++) {
-        const bx = 200 + i * 56;
+        const bx = 90 + i * 46;
         let col = '#888';
         if (key === 'fur') col = CAT_LOOK_FUR[i % CAT_LOOK_FUR.length];
         if (key === 'nose') col = CAT_LOOK_NOSE[i % CAT_LOOK_NOSE.length];
         if (key === 'eyes') col = CAT_LOOK_EYES[i % CAT_LOOK_EYES.length];
         ctx.fillStyle = col;
-        drawRoundRect(bx, y - 16, 44, 32, 8);
+        drawRoundRect(bx, y - 13, 38, 28, 6);
         ctx.fill();
         if (selectFlow[key] === i) {
           ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 3;
-          drawRoundRect(bx - 2, y - 18, 48, 36, 9);
+          ctx.lineWidth = 2;
+          drawRoundRect(bx - 1, y - 14, 40, 30, 7);
           ctx.stroke();
         }
-        if (mouse.clicked && hitBox(mouse.x, mouse.y, bx, y - 16, 44, 32)) {
+        if (mouse.clicked && hitBox(mouse.x, mouse.y, bx, y - 13, 38, 28)) {
           sfxClick();
           selectFlow[key] = i;
           mouse.clicked = false;
         }
       }
     };
-    row('Fur', CAT_LOOK_FUR.length, 'fur', 300);
-    row('Nose', CAT_LOOK_NOSE.length, 'nose', 360);
-    row('Eyes', CAT_LOOK_EYES.length, 'eyes', 420);
+    row('Fur', CAT_LOOK_FUR.length, 'fur', 430);
+    row('Nose', CAT_LOOK_NOSE.length, 'nose', 470);
+    row('Eyes', CAT_LOOK_EYES.length, 'eyes', 510);
 
-    drawButton(W / 2 - 100, H - 100, 200, 50, 'Start life together!', '#6c5ce7', true);
-    if (mouse.clicked && hitBox(mouse.x, mouse.y, W / 2 - 100, H - 100, 200, 50)) {
+    drawButton(W / 2 - 100, H - 90, 200, 50, 'Start life together!', '#6c5ce7', true);
+    if (mouse.clicked && hitBox(mouse.x, mouse.y, W / 2 - 100, H - 90, 200, 50)) {
       sfxMeow();
       const nm = (selectFlow.name || '').trim() || CAT_BREEDS[selectFlow.breed].name;
       game.currentCat = createCatInstance(selectFlow.breed, {
@@ -248,14 +228,14 @@ function drawSelect() {
       resetCare();
       initCatAI();
       game.screen = 'care';
-      selectFlow.step = 'breed';
+      selectFlow.step = 'name';
       mouse.clicked = false;
     }
 
-    drawButton(20, H - 52, 140, 40, '← Back', '#636e72', true);
-    if (mouse.clicked && hitBox(mouse.x, mouse.y, 20, H - 52, 140, 40)) {
+    drawButton(20, H - 52, 120, 40, '← Avatar', '#636e72', true);
+    if (mouse.clicked && hitBox(mouse.x, mouse.y, 20, H - 52, 120, 40)) {
       sfxClick();
-      selectFlow.step = 'name';
+      game.screen = 'avatar';
       mouse.clicked = false;
     }
   }

@@ -8,6 +8,7 @@ const BY_SCRATCH_RANGE = 78;
 const BY_SCRATCH_COOLDOWN = 1.35;
 const BY_DASH_COOLDOWN = 1.35;
 const BY_SCRATCH_BTN_X = 10, BY_SCRATCH_BTN_Y = H - 50, BY_SCRATCH_BTN_W = 120, BY_SCRATCH_BTN_H = 44;
+const CRITTER_HP = { bird: 2, bug: 1, bunny: 4, lizard: 3 };
 
 function drawCritterSprite(x, y, kind, t, face) {
   ctx.save();
@@ -30,6 +31,60 @@ function drawCritterSprite(x, y, kind, t, face) {
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(4, wob); ctx.lineTo(14, wob + 1);
+    ctx.stroke();
+  } else if (kind === 'bunny') {
+    ctx.fillStyle = '#d4a080';
+    drawEllipse(0, wob, 12, 10);
+    ctx.fill();
+    ctx.fillStyle = '#c08060';
+    drawEllipse(0, wob + 3, 8, 6);
+    ctx.fill();
+    ctx.fillStyle = '#d4a080';
+    drawEllipse(-4, wob - 11, 3, 9);
+    ctx.fill();
+    drawEllipse(4, wob - 11, 3, 9);
+    ctx.fill();
+    ctx.fillStyle = '#f0c8b0';
+    drawEllipse(-4, wob - 11, 2, 6);
+    ctx.fill();
+    drawEllipse(4, wob - 11, 2, 6);
+    ctx.fill();
+    ctx.fillStyle = '#222';
+    drawEllipse(5, wob - 2, 2, 2);
+    ctx.fill();
+    ctx.fillStyle = '#f8a0a0';
+    drawEllipse(8, wob + 1, 1.5, 1);
+    ctx.fill();
+    ctx.fillStyle = '#fff8f0';
+    drawEllipse(-8, wob + 4, 3.5, 3);
+    ctx.fill();
+  } else if (kind === 'lizard') {
+    ctx.fillStyle = '#6a9a4a';
+    drawEllipse(0, wob, 14, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#5a8a3a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-12, wob);
+    ctx.quadraticCurveTo(-20, wob - 4, -26, wob + 2);
+    ctx.stroke();
+    ctx.fillStyle = '#7aaa5a';
+    drawEllipse(12, wob - 1, 5, 4);
+    ctx.fill();
+    ctx.fillStyle = '#222';
+    drawEllipse(14, wob - 2, 1.5, 1.5);
+    ctx.fill();
+    ctx.strokeStyle = '#5a8a3a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-4, wob + 5); ctx.lineTo(-6, wob + 9);
+    ctx.moveTo(4, wob + 5); ctx.lineTo(6, wob + 9);
+    ctx.stroke();
+    ctx.strokeStyle = '#f44';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(16, wob);
+    ctx.lineTo(20, wob + 1);
     ctx.stroke();
   } else {
     ctx.fillStyle = '#7a9a50';
@@ -64,17 +119,22 @@ function initBackyard() {
   b.dashCooldown = 0;
   b.dashing = false;
   b.dashTimer = 0;
-  b.scratchCooldown = 0;
-  b.scratchFlash = 0;
+  b.attackCooldown = 0;
+  b.attackFlash = 0;
   b.particles = [];
 
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
+    const r = Math.random();
+    const kind = r < 0.25 ? 'bird' : r < 0.5 ? 'bug' : r < 0.75 ? 'bunny' : 'lizard';
     b.critters.push({
       x: 80 + Math.random() * (W - 160),
       y: 120 + Math.random() * (H - 240),
       vx: (Math.random() - 0.5) * 85,
       vy: (Math.random() - 0.5) * 48,
-      kind: Math.random() < 0.5 ? 'bird' : 'bug',
+      kind,
+      hp: CRITTER_HP[kind],
+      maxHp: CRITTER_HP[kind],
+      dead: false,
       caught: false,
       phase: Math.random() * Math.PI * 2,
     });
@@ -112,11 +172,11 @@ function updateBackyard(dt) {
   if (b.dashing) speed *= 2.35;
 
   const homeHit = hitBox(mouse.x, mouse.y, W - 130, 10, 120, 35);
-  const scratchBtnHit = hitBox(mouse.x, mouse.y, BY_SCRATCH_BTN_X, BY_SCRATCH_BTN_Y, BY_SCRATCH_BTN_W, BY_SCRATCH_BTN_H);
+  const attackBtnHit = hitBox(mouse.x, mouse.y, BY_SCRATCH_BTN_X, BY_SCRATCH_BTN_Y, BY_SCRATCH_BTN_W, BY_SCRATCH_BTN_H);
 
   b.dashCooldown = Math.max(0, (b.dashCooldown || 0) - dt);
-  b.scratchCooldown = Math.max(0, (b.scratchCooldown || 0) - dt);
-  if (b.scratchFlash > 0) b.scratchFlash -= dt;
+  b.attackCooldown = Math.max(0, (b.attackCooldown || 0) - dt);
+  if (b.attackFlash > 0) b.attackFlash -= dt;
   if (b.dashing) {
     b.dashTimer -= dt;
     if (b.dashTimer <= 0) b.dashing = false;
@@ -129,35 +189,44 @@ function updateBackyard(dt) {
     sfxDash();
   }
 
-  const scratchKeys = keys['KeyF'] || keys['KeyE'];
-  const scratchClick = mouse.clicked && scratchBtnHit;
-  if (b.scratchCooldown <= 0 && (scratchKeys || scratchClick)) {
+  const attackKeys = keys['KeyF'] || keys['KeyE'];
+  const attackClick = mouse.clicked && attackBtnHit;
+  if (b.attackCooldown <= 0 && (attackKeys || attackClick)) {
     let hitAny = false;
     b.critters.forEach(c => {
-      if (c.caught) return;
+      if (c.caught || c.dead) return;
       const d = Math.hypot(c.x - b.px, c.y - b.py);
       if (d < BY_SCRATCH_RANGE) {
         hitAny = true;
+        c.hp--;
         const nx = d < 1e-3 ? 1 : (c.x - b.px) / d;
         const ny = d < 1e-3 ? 0 : (c.y - b.py) / d;
-        c.x += nx * 55;
-        c.y += ny * 55;
-        c.vx += nx * 120;
-        c.vy += ny * 90;
+        c.x += nx * 40;
+        c.y += ny * 40;
+        c.vx += nx * 100;
+        c.vy += ny * 80;
+        spawnParticles(b.particles, c.x, c.y, 6, '#f44', 70);
+        if (c.hp <= 0) {
+          c.dead = true;
+          c.vx = 0; c.vy = 0;
+          sfxComplete();
+          spawnParticles(b.particles, c.x, c.y, 20, '#ffcc44', 90);
+          addFloat(c.x, c.y - 36, `${c.kind.charAt(0).toUpperCase() + c.kind.slice(1)} down! Eat it!`, '#fa0');
+        }
       }
     });
-    spawnParticles(b.particles, b.px, b.py, hitAny ? 10 : 4, '#ffcc44', 50);
-    b.scratchCooldown = BY_SCRATCH_COOLDOWN;
-    b.scratchFlash = 0.26;
+    spawnParticles(b.particles, b.px, b.py, hitAny ? 8 : 3, '#f44', 60);
+    b.attackCooldown = BY_SCRATCH_COOLDOWN;
+    b.attackFlash = 0.26;
     sfxScrape();
-    addFloat(b.px, b.py - 38, hitAny ? '💅 Gotcha!' : '💅 Swipe!', hitAny ? '#fa0' : '#88a');
+    addFloat(b.px, b.py - 38, hitAny ? '⚔️ Hit!' : '⚔️ Swing!', hitAny ? '#f44' : '#88a');
   }
 
-  if (mouse.clicked && !homeHit && !scratchBtnHit) {
+  if (mouse.clicked && !homeHit && !attackBtnHit) {
     b.targetX = mouse.x;
     b.targetY = mouse.y;
   }
-  if (mouse.down && !homeHit && !scratchBtnHit) {
+  if (mouse.down && !homeHit && !attackBtnHit) {
     if (touchCtrl.isTouch) {
       if (touchCtrl.uiId !== null) {
         b.targetX = mouse.x;
@@ -169,7 +238,7 @@ function updateBackyard(dt) {
     }
   }
 
-  const pointerMovesCat = mouse.down && (!touchCtrl.isTouch || touchCtrl.uiId !== null) && !homeHit && !scratchBtnHit;
+  const pointerMovesCat = mouse.down && (!touchCtrl.isTouch || touchCtrl.uiId !== null) && !homeHit && !attackBtnHit;
 
   let kbDx = 0, kbDy = 0;
   if (keys['ArrowLeft'] || keys['KeyA']) kbDx -= 1;
@@ -223,16 +292,38 @@ function updateBackyard(dt) {
 
   b.critters.forEach(c => {
     if (c.caught) return;
+    if (c.dead) {
+      c.phase += dt * 4;
+      if (Math.hypot(b.px - c.x, b.py - c.y) < 34) {
+        c.caught = true;
+        sfxGather();
+        spawnParticles(b.particles, c.x, c.y, 14, '#f87', 65);
+        const prev = game.care.feed;
+        const feedAmt = c.kind === 'bunny' ? 3 : c.kind === 'lizard' ? 2 : 1;
+        game.care.feed = Math.min(MAX_PER_ACTIVITY, game.care.feed + feedAmt);
+        const gained = game.care.feed - prev;
+        if (gained > 0) {
+          addFloat(c.x, c.y - 32, `Ate ${c.kind}! +${gained} feed 🍖`, '#f87');
+          checkGrowth();
+        } else {
+          addFloat(c.x, c.y - 32, 'Full — woo! ✨', '#8a8');
+        }
+      }
+      return;
+    }
     c.phase += dt * 8;
     const dx = c.x - b.px;
     const dy = c.y - b.py;
     const dist = Math.hypot(dx, dy) || 1;
-    if (dist < 160) {
-      const flee = 220 * (1 - dist / 160);
+    const fleeRange = c.kind === 'lizard' ? 250 : c.kind === 'bunny' ? 190 : 160;
+    const fleeStr = c.kind === 'lizard' ? 290 : c.kind === 'bunny' ? 250 : 220;
+    if (dist < fleeRange) {
+      const flee = fleeStr * (1 - dist / fleeRange);
       c.vx += (dx / dist) * flee * dt;
       c.vy += (dy / dist) * flee * dt;
     }
-    const cap = c.kind === 'bird' ? 195 : 165;
+    const caps = { bird: 195, bug: 165, bunny: 180, lizard: 230 };
+    const cap = caps[c.kind] || 165;
     const vm = Math.hypot(c.vx, c.vy);
     if (vm > cap) {
       c.vx = (c.vx / vm) * cap;
@@ -243,22 +334,7 @@ function updateBackyard(dt) {
     if (c.x < 40 || c.x > W - 40) c.vx *= -0.85;
     if (c.y < 90 || c.y > H - 100) c.vy *= -0.85;
     if (c.kind === 'bird') c.y += Math.sin(game.time * 3 + c.x * 0.01) * 10 * dt;
-
-    if (Math.hypot(b.px - c.x, b.py - c.y) < 34) {
-      c.caught = true;
-      sfxGather();
-      sfxComplete();
-      spawnParticles(b.particles, c.x, c.y, 18, '#6c6', 70);
-      spawnParticles(b.particles, c.x, c.y - 8, 12, '#ffcc44', 55);
-      const prev = game.care.feed;
-      game.care.feed = Math.min(MAX_PER_ACTIVITY, game.care.feed + 1);
-      if (game.care.feed > prev) {
-        addFloat(c.x, c.y - 32, c.kind === 'bird' ? 'Nice! +1 feed 🎉' : 'Bug nabbed! +1 feed 🎉', '#4a9');
-        checkGrowth();
-      } else {
-        addFloat(c.x, c.y - 32, 'Full — woo! ✨', '#8a8');
-      }
-    }
+    if (c.kind === 'bunny') c.y += Math.sin(game.time * 8 + c.x * 0.01) * 14 * dt;
   });
 
   b.eggs.forEach(egg => {
@@ -308,7 +384,7 @@ function drawBackyard() {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 8; i++) {
     const tx = (i * 113 + 30) % W;
     const ty = 120 + (i * 67) % (H * 0.45);
     ctx.fillStyle = 'rgba(40, 90, 40, 0.45)';
@@ -316,6 +392,20 @@ function drawBackyard() {
     ctx.fillStyle = `rgba(${50 + (i % 3) * 20}, ${120 + (i % 4) * 15}, 60, 0.85)`;
     ctx.beginPath();
     ctx.arc(tx, ty - 45, 28 + (i % 4) * 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const flowerColors = ['#ff6b8a', '#ffb347', '#ff69b4', '#dda0dd', '#ff8c69', '#ffd700', '#ff4081', '#ff7f50'];
+  for (let i = 0; i < 35; i++) {
+    const fx = (i * 79 + 31) % (W - 20) + 10;
+    const fy = H * 0.38 + (i * 57 + 23) % (H * 0.45);
+    const fc = flowerColors[i % flowerColors.length];
+    const fs = 4 + (i % 4) * 2;
+    ctx.fillStyle = fc;
+    drawEllipse(fx, fy, fs, fs * 0.7);
+    ctx.fill();
+    ctx.fillStyle = '#ffeb3b';
+    drawEllipse(fx, fy, fs * 0.35, fs * 0.35);
     ctx.fill();
   }
 
@@ -339,8 +429,27 @@ function drawBackyard() {
 
   b.critters.forEach(c => {
     if (c.caught) return;
+    if (c.dead) {
+      ctx.globalAlpha = 0.6;
+      const face = 1;
+      drawCritterSprite(c.x, c.y + 4, c.kind, c.phase, face);
+      ctx.globalAlpha = 1;
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🍖', c.x, c.y - 12);
+      return;
+    }
     const face = c.vx >= 0 ? 1 : -1;
     drawCritterSprite(c.x, c.y, c.kind, c.phase, face);
+    if (c.maxHp > 1) {
+      const barW = 24, barH = 4;
+      const barX = c.x - barW / 2, barY = c.y - 22;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(barX, barY, barW, barH);
+      const hpRatio = c.hp / c.maxHp;
+      ctx.fillStyle = hpRatio > 0.5 ? '#6c6' : hpRatio > 0.25 ? '#fc0' : '#f44';
+      ctx.fillRect(barX + 1, barY + 1, (barW - 2) * hpRatio, barH - 2);
+    }
   });
 
   b.eggs.forEach(egg => {
@@ -366,9 +475,9 @@ function drawBackyard() {
     drawCat(b.px, b.py, currentCat.breed, currentCat.stage, 1, game.time, true, false, currentCat.equipped, currentCat.look);
   }
 
-  if (b.scratchFlash > 0) {
+  if (b.attackFlash > 0) {
     ctx.globalAlpha = 0.35;
-    ctx.strokeStyle = '#ffcc44';
+    ctx.strokeStyle = '#f44';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(b.px, b.py, 30, 0, Math.PI * 2);
@@ -382,7 +491,7 @@ function drawBackyard() {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'left';
-  let sub = 'Trees & fresh air — critters flee! Dash / scratch help you catch them.';
+  let sub = 'A garden with flowers — attack critters to bring them down, then eat!';
   if (typeof isEggHuntEventActive === 'function' && isEggHuntEventActive() && !game.eggHuntRewardClaimed && b.eggs.length > 0) {
     const left = b.eggs.filter(e => !e.collected).length;
     sub = `Egg hunt off-season in code — ${left} eggs if event returns.`;
@@ -392,8 +501,8 @@ function drawBackyard() {
   ctx.font = '13px sans-serif';
   ctx.fillText(sub, 22, 36);
 
-  const scReady = (b.scratchCooldown || 0) <= 0;
-  drawButton(BY_SCRATCH_BTN_X, BY_SCRATCH_BTN_Y, BY_SCRATCH_BTN_W, BY_SCRATCH_BTN_H, scReady ? '😼 Scratch' : `${(b.scratchCooldown || 0).toFixed(1)}s`, scReady ? '#e17055' : '#95a5a6', scReady);
+  const atkReady = (b.attackCooldown || 0) <= 0;
+  drawButton(BY_SCRATCH_BTN_X, BY_SCRATCH_BTN_Y, BY_SCRATCH_BTN_W, BY_SCRATCH_BTN_H, atkReady ? '⚔️ Attack' : `${(b.attackCooldown || 0).toFixed(1)}s`, atkReady ? '#c0392b' : '#95a5a6', atkReady);
 
   drawTouchControls();
   drawButton(W - 130, 10, 120, 35, 'Go Home', '#6c5ce7', true);

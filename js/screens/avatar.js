@@ -1,4 +1,4 @@
-// Avatar creator — runs before choose-a-cat
+// Avatar creator — skin, hair, eyes (gender comes from avatarname)
 // Depends on: game state, drawing utils
 
 const AVATAR_SKIN = ['#f5d0b5', '#c68642', '#8d5524', '#4a3020'];
@@ -9,7 +9,10 @@ function drawAvatar() {
   setBgMusicTheme('select');
   if (!bgMusic.playing && bgMusic.enabled) startBgMusic();
 
-  const g = game.playerAvatar || { skin: 0, hair: 0, eyes: 0 };
+  const g = game.playerAvatar || {};
+  if (g.skin === undefined) g.skin = 0;
+  if (g.hair === undefined) g.hair = 0;
+  if (g.eyes === undefined) g.eyes = 0;
   game.playerAvatar = g;
 
   const grad = ctx.createLinearGradient(0, 0, 0, H);
@@ -21,19 +24,38 @@ function drawAvatar() {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 28px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Who are you?', W / 2, 48);
+  const label = g.gender === 'boy' ? 'Hey there, ' + (g.name || 'boy') + '!' : 'Hey there, ' + (g.name || 'girl') + '!';
+  ctx.fillText(label, W / 2, 48);
 
   const cx = W / 2, cy = 200;
   ctx.save();
   ctx.translate(cx, cy);
+
+  // Hair (behind head)
+  ctx.fillStyle = AVATAR_HAIR[g.hair % AVATAR_HAIR.length];
+  if (g.gender === 'girl') {
+    ctx.beginPath();
+    ctx.arc(0, -18, 48, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-42, 10, 14, 32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(42, 10, 14, 32, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(0, -18, 48, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.fill();
+  }
+
+  // Head
   ctx.fillStyle = AVATAR_SKIN[g.skin % AVATAR_SKIN.length];
   ctx.beginPath();
   ctx.arc(0, 0, 52, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = AVATAR_HAIR[g.hair % AVATAR_HAIR.length];
-  ctx.beginPath();
-  ctx.arc(0, -18, 48, Math.PI * 1.1, Math.PI * 1.9);
-  ctx.fill();
+
+  // Eyes (two, with white sclera)
   ctx.fillStyle = '#fff';
   drawEllipse(-18, -5, 10, 12);
   drawEllipse(18, -5, 10, 12);
@@ -42,9 +64,23 @@ function drawAvatar() {
   drawEllipse(-18, -5, 5, 6);
   drawEllipse(18, -5, 5, 6);
   ctx.fill();
-  ctx.fillStyle = '#ffb0a0';
-  drawEllipse(0, 18, 12, 8);
+  ctx.fillStyle = '#111';
+  drawEllipse(-18, -5, 2.5, 3);
+  drawEllipse(18, -5, 2.5, 3);
   ctx.fill();
+
+  // Nose
+  ctx.fillStyle = '#ffb0a0';
+  drawEllipse(0, 10, 5, 4);
+  ctx.fill();
+
+  // Smile
+  ctx.strokeStyle = '#c08070';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(0, 8, 14, 0.15, Math.PI - 0.15);
+  ctx.stroke();
+
   ctx.restore();
 
   const rowY = 340;
@@ -85,6 +121,6 @@ function drawAvatar() {
   drawButton(20, H - 48, 100, 36, 'Back', '#636e72', true);
   if (mouse.clicked && hitBox(mouse.x, mouse.y, 20, H - 48, 100, 36)) {
     sfxClick();
-    game.screen = 'title';
+    game.screen = 'avatarname';
   }
 }
