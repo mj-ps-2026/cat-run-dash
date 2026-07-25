@@ -5,7 +5,7 @@
 
 // Home (care screen): horizontal scrolling "rooms" — each segment is W wide
 const HOME_ROOM_W = 800;
-const HOME_ROOMS = 3;
+const HOME_ROOMS = 6;
 const HOME_TOTAL_W = HOME_ROOM_W * HOME_ROOMS;
 
 // Backyard egg hunt — disabled (was Easter season; re-enable by restoring date check below)
@@ -72,6 +72,57 @@ const HOME_ROOM_THEMES = [
     frame: '#fff',
     decor: 'shelf',
   },
+  {
+    label: 'Bathroom',
+    skyTop: '#b0d8f0',
+    skyMid: '#d8eeff',
+    skyBottom: '#80c8d8',
+    wall: '#e8f4fc',
+    wallBand: '#d0e8f4',
+    floor: '#b8d0dc',
+    floorStyle: 'tile',
+    baseboard: '#8aa8b8',
+    windowX: 200,
+    windowW: 100,
+    windowH: 90,
+    windowTint: '#b8e0f0',
+    frame: '#f0f8ff',
+    decor: 'shelf',
+  },
+  {
+    label: 'Playroom',
+    skyTop: '#f0d8a8',
+    skyMid: '#ffe8c0',
+    skyBottom: '#c8e0a0',
+    wall: '#faf0dc',
+    wallBand: '#f0e4c8',
+    floor: '#d4b888',
+    floorStyle: 'wood',
+    baseboard: '#b89868',
+    windowX: 560,
+    windowW: 130,
+    windowH: 100,
+    windowTint: '#f0d8a0',
+    frame: '#fff8f0',
+    decor: 'picture',
+  },
+  {
+    label: 'Sunroom',
+    skyTop: '#ffd88a',
+    skyMid: '#ffe8b8',
+    skyBottom: '#a8e8a8',
+    wall: '#f8f4e8',
+    wallBand: '#eee8d8',
+    floor: '#d4c8a8',
+    floorStyle: 'tile',
+    baseboard: '#b8a888',
+    windowX: 100,
+    windowW: 180,
+    windowH: 140,
+    windowTint: '#ffe8a0',
+    frame: '#f8f4ec',
+    decor: 'shelf',
+  },
 ];
 
 // ============================================================
@@ -125,6 +176,11 @@ const STORE_ITEMS = [
   { id: 'shrimp',       cat: 'food', name: 'Shrimp',        price: 8,  icon: '🦐', desc: '+3 Feed',   effect: { act: 'feed', amount: 3 } },
   { id: 'fancyfeast',   cat: 'food', name: 'Fancy Feast',   price: 12, icon: '🍖', desc: '+5 Feed',   effect: { act: 'feed', amount: 5 } },
   { id: 'cake',         cat: 'food', name: 'Cat Cake',      price: 15, icon: '🎂', desc: '+5 Feed',   effect: { act: 'feed', amount: 5 } },
+  { id: 'turkey',       cat: 'food', name: 'Turkey Slice',  price: 6,  icon: '🦃', desc: '+2 Feed',   effect: { act: 'feed', amount: 2 } },
+  { id: 'beef',         cat: 'food', name: 'Beef Bites',    price: 6,  icon: '🥩', desc: '+2 Feed',   effect: { act: 'feed', amount: 2 } },
+  { id: 'sushi',        cat: 'food', name: 'Cat Sushi',     price: 9,  icon: '🍣', desc: '+3 Feed',   effect: { act: 'feed', amount: 3 } },
+  { id: 'lobster',      cat: 'food', name: 'Lobster Bites', price: 18, icon: '🦞', desc: '+5 Feed',   effect: { act: 'feed', amount: 5 } },
+  { id: 'catnip_treat', cat: 'food', name: 'Catnip Treat',  price: 5,  icon: '🌿', desc: '+1 Feed',   effect: { act: 'feed', amount: 1 } },
   { id: 'grow_boost',   cat: 'food', name: 'Growth Elixir', price: 40, icon: '✨', desc: 'Advance stage (once)', vipOnly: true, growBoost: true },
   // ── Toys (consumable — auto-plays) ──
   { id: 'yarn',         cat: 'toys', name: 'Yarn Ball',     price: 0,  icon: '🧶', desc: '+1 Play',   effect: { act: 'play', amount: 1 } },
@@ -135,6 +191,13 @@ const STORE_ITEMS = [
   { id: 'butterfly',    cat: 'toys', name: 'Butterfly Toy',  price: 8,  icon: '🦋', desc: '+3 Play',  effect: { act: 'play', amount: 3 } },
   { id: 'laser',        cat: 'toys', name: 'Laser Pointer', price: 12, icon: '🔴', desc: '+5 Play',   effect: { act: 'play', amount: 5 } },
   { id: 'rc_car',       cat: 'toys', name: 'RC Mouse Car',  price: 14, icon: '🏎️', desc: '+5 Play',  effect: { act: 'play', amount: 5 } },
+  { id: 'crinkle_ball',  cat: 'toys', name: 'Crinkle Ball',   price: 4,  icon: '⚾', desc: '+1 Play',  effect: { act: 'play', amount: 1 } },
+  { id: 'bouncy_ball',   cat: 'toys', name: 'Bouncy Ball',    price: 3,  icon: '🟡', desc: '+1 Play',  effect: { act: 'play', amount: 1 } },
+  { id: 'catnip_mouse',  cat: 'toys', name: 'Catnip Mouse',   price: 6,  icon: '🐁', desc: '+2 Play',  effect: { act: 'play', amount: 2 } },
+  { id: 'cat_dancer',    cat: 'toys', name: 'Cat Dancer',     price: 7,  icon: '🪄', desc: '+3 Play',  effect: { act: 'play', amount: 3 } },
+  { id: 'treat_puzzle',  cat: 'toys', name: 'Treat Puzzle',   price: 10, icon: '🧩', desc: '+3 Play',  effect: { act: 'play', amount: 3 } },
+  { id: 'tunnel_tube',   cat: 'toys', name: 'Tunnel Tube',    price: 13, icon: '🟠', desc: '+4 Play',  effect: { act: 'play', amount: 4 } },
+  { id: 'automouse',     cat: 'toys', name: 'Auto Mouse',     price: 16, icon: '🤖', desc: '+5 Play',  effect: { act: 'play', amount: 5 } },
   // ── Accessories: Head ──
   { id: 'bow_blue',     cat: 'accessories', name: 'Blue Bow',      price: 6,  icon: '🎀', desc: 'Cute bow',          slot: 'head' },
   { id: 'bow_pink',     cat: 'accessories', name: 'Pink Bow',      price: 6,  icon: '🎀', desc: 'Pretty bow',        slot: 'head' },
@@ -148,11 +211,17 @@ const STORE_ITEMS = [
   { id: 'tophat',       cat: 'accessories', name: 'Top Hat',       price: 10, icon: '🎩', desc: 'Very dapper',       slot: 'head' },
   { id: 'crown',        cat: 'accessories', name: 'Crown',         price: 15, icon: '👑', desc: 'Royal vibes',       slot: 'head' },
   { id: 'halo',         cat: 'accessories', name: 'Halo',          price: 14, icon: '😇', desc: 'Angel kitty',       slot: 'head' },
+  { id: 'santa_hat',    cat: 'accessories', name: 'Santa Hat',     price: 8,  icon: '🎅', desc: 'Ho ho ho!',          slot: 'head' },
+  { id: 'witch_hat',    cat: 'accessories', name: 'Witch Hat',     price: 10, icon: '🌙', desc: 'Spooky vibes',       slot: 'head' },
+  { id: 'cat_ears_headband', cat: 'accessories', name: 'Cat Ears Headband', price: 7, icon: '🐱', desc: 'Double cat energy',  slot: 'head' },
+  { id: 'tiara',        cat: 'accessories', name: 'Tiara',         price: 13, icon: '👑', desc: 'Princess kitty',      slot: 'head' },
   // ── Accessories: Eyes ──
   { id: 'sunglasses',   cat: 'accessories', name: 'Sunglasses',    price: 8,  icon: '🕶️', desc: 'Cool shades',      slot: 'eyes' },
   { id: 'heart_glasses',cat: 'accessories', name: 'Heart Glasses', price: 9,  icon: '💗', desc: 'Love at first sight',slot: 'eyes' },
   { id: 'star_glasses', cat: 'accessories', name: 'Star Glasses',  price: 10, icon: '⭐', desc: 'Superstar',         slot: 'eyes' },
   { id: 'monocle',      cat: 'accessories', name: 'Monocle',       price: 12, icon: '🧐', desc: 'Distinguished',     slot: 'eyes' },
+  { id: 'nerd_glasses', cat: 'accessories', name: 'Nerd Glasses',  price: 7,  icon: '🤓', desc: 'Smart kitty',        slot: 'eyes' },
+  { id: 'vr_headset',   cat: 'accessories', name: 'VR Headset',    price: 15, icon: '🥽', desc: 'Virtual cat',        slot: 'eyes' },
   // ── Accessories: Neck ──
   { id: 'collar_red',   cat: 'accessories', name: 'Red Collar',    price: 0,  icon: '🔴', desc: 'Stylish collar',    slot: 'neck' },
   { id: 'collar_gold',  cat: 'accessories', name: 'Gold Collar',   price: 8,  icon: '💛', desc: 'Fancy collar',      slot: 'neck' },
@@ -164,12 +233,17 @@ const STORE_ITEMS = [
   { id: 'bandana',      cat: 'accessories', name: 'Bandana',       price: 5,  icon: '🧣', desc: 'Adventurous',       slot: 'neck' },
   { id: 'scarf',        cat: 'accessories', name: 'Scarf',         price: 8,  icon: '🧣', desc: 'Stay warm',         slot: 'neck' },
   { id: 'pearl_necklace',cat:'accessories', name: 'Pearl Necklace',price: 14, icon: '📿', desc: 'So fancy',          slot: 'neck' },
+  { id: 'tie',          cat: 'accessories', name: 'Cat Tie',       price: 6,  icon: '👔', desc: 'Business casual',    slot: 'neck' },
+  { id: 'choker',       cat: 'accessories', name: 'Choker',        price: 9,  icon: '⚫', desc: 'Edgy look',          slot: 'neck' },
+  { id: 'medal',        cat: 'accessories', name: 'Gold Medal',    price: 12, icon: '🏅', desc: 'Champion!',          slot: 'neck' },
   // ── Accessories: Back ──
   { id: 'cape',         cat: 'accessories', name: 'Red Cape',      price: 12, icon: '🦸', desc: 'Super cat!',        slot: 'back' },
   { id: 'cape_blue',    cat: 'accessories', name: 'Blue Cape',     price: 12, icon: '🦸', desc: 'Cool hero',         slot: 'back' },
   { id: 'wings_angel',  cat: 'accessories', name: 'Angel Wings',   price: 18, icon: '🪽', desc: 'Heavenly kitty',    slot: 'back' },
   { id: 'wings_bat',    cat: 'accessories', name: 'Bat Wings',     price: 16, icon: '🦇', desc: 'Spooky kitty',      slot: 'back' },
   { id: 'backpack',     cat: 'accessories', name: 'Backpack',      price: 10, icon: '🎒', desc: 'Ready to explore',  slot: 'back' },
+  { id: 'jetpack',      cat: 'accessories', name: 'Jetpack',       price: 20, icon: '🚀', desc: 'Zoom zoom!',         slot: 'back' },
+  { id: 'guitar',       cat: 'accessories', name: 'Guitar',        price: 14, icon: '🎸', desc: 'Rockstar cat',       slot: 'back' },
   // ── Furniture (with color variants) ──
   { id: 'catbed',       cat: 'furniture', name: 'Pink Cat Bed',    price: 8,  icon: '🛏️', desc: 'Comfy naps' },
   { id: 'catbed_blue',  cat: 'furniture', name: 'Blue Cat Bed',    price: 8,  icon: '🛏️', desc: 'Cool & cozy' },
@@ -206,6 +280,19 @@ const STORE_ITEMS = [
   { id: 'cat_tunnel',   cat: 'furniture', name: 'Cat Tunnel',      price: 14, icon: '🌀', desc: 'Peek & zoom' },
   { id: 'floor_lamp_brass',  cat: 'furniture', name: 'Brass Floor Lamp',  price: 22, icon: '💡', desc: 'Tap at home to turn on/off' },
   { id: 'floor_lamp_modern', cat: 'furniture', name: 'Modern Floor Lamp', price: 24, icon: '🔦', desc: 'Tap at home to turn on/off' },
+  { id: 'cat_sofa',          cat: 'furniture', name: 'Cat Sofa',          price: 14, icon: '🛋️', desc: 'Mini lounge' },
+  { id: 'window_perch',      cat: 'furniture', name: 'Window Perch',      price: 11, icon: '🪟', desc: 'Bird watching' },
+  { id: 'cat_gym',           cat: 'furniture', name: 'Cat Gym',           price: 18, icon: '🏋️', desc: 'Fitness time' },
+  { id: 'scratching_mat',    cat: 'furniture', name: 'Scratching Mat',    price: 5,  icon: '📋', desc: 'Floor-friendly' },
+  { id: 'teepee',            cat: 'furniture', name: 'Cat Teepee',        price: 12, icon: '⛺', desc: 'Hideout' },
+  { id: 'cat_wheel',         cat: 'furniture', name: 'Cat Wheel',         price: 20, icon: '⚙️', desc: 'Run forever' },
+  { id: 'treat_dispenser',   cat: 'furniture', name: 'Treat Dispenser',   price: 9,  icon: '🎯', desc: 'Automatic treats' },
+  { id: 'food_mat',          cat: 'furniture', name: 'Food Mat',          price: 4,  icon: '🟫', desc: 'Tidy eater' },
+  { id: 'cat_tree_house',    cat: 'furniture', name: 'Cat Tree House',    price: 22, icon: '🏡', desc: 'Luxury living' },
+  { id: 'wall_shelves',      cat: 'furniture', name: 'Wall Shelves',      price: 10, icon: '📐', desc: 'Vertical space' },
+  { id: 'cat_bridge',        cat: 'furniture', name: 'Cat Bridge',        price: 15, icon: '🌉', desc: 'Connect shelves' },
+  { id: 'heated_bed',        cat: 'furniture', name: 'Heated Bed',        price: 16, icon: '🔥', desc: 'Warm & toasty' },
+  { id: 'couch_pillow',      cat: 'furniture', name: 'Couch Pillow',      price: 6,  icon: '🟣', desc: 'Plop on the couch' },
 ];
 
 // Behavior emotes — chosen based on mood (paw fullness)
@@ -298,13 +385,26 @@ const FURNITURE_DEFAULTS = {
   cat_tunnel: { x: HOME_ROOM_W + 380, y: 368 },
   floor_lamp_brass: { x: HOME_ROOM_W * 2 + 180, y: 332 },
   floor_lamp_modern: { x: HOME_ROOM_W * 2 + 260, y: 330 },
+  cat_sofa: { x: HOME_ROOM_W + 150, y: 355 },
+  window_perch: { x: HOME_ROOM_W + 480, y: 310 },
+  cat_gym: { x: HOME_ROOM_W + 600, y: 280 },
+  scratching_mat: { x: HOME_ROOM_W * 2 + 100, y: 380 },
+  teepee: { x: HOME_ROOM_W + 280, y: 340 },
+  cat_wheel: { x: HOME_ROOM_W * 2 + 350, y: 340 },
+  treat_dispenser: { x: HOME_ROOM_W * 2 + 450, y: 350 },
+  food_mat: { x: HOME_ROOM_W * 2 + 520, y: 380 },
+  cat_tree_house: { x: HOME_ROOM_W * 2 + 600, y: 260 },
+  wall_shelves: { x: HOME_ROOM_W * 2 + 700, y: 200 },
+  cat_bridge: { x: HOME_ROOM_W * 2 + 740, y: 190 },
+  heated_bed: { x: HOME_ROOM_W + 100, y: 365 },
+  couch_pillow: { x: 340, y: 328 },
 };
 
 // Map variant IDs to their base furniture type for behavior/hitbox purposes
 const FURNITURE_BASE = {};
 Object.keys(FURNITURE_DEFAULTS).forEach(id => {
   // Base type is the part before the last underscore variant, if it matches a known base
-  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch','litterbox','cat_tunnel','floor_lamp'];
+  const bases = ['catbed','scratchpost','cattower','foodbowl','fountain','blanket','hammock','fishtank','plant','rug','bookshelf','toybox','nightlight','painting','couch','litterbox','cat_tunnel','floor_lamp','cat_sofa','window_perch','cat_gym','scratching_mat','teepee','cat_wheel','treat_dispenser','food_mat','cat_tree_house','wall_shelves','cat_bridge','heated_bed','couch_pillow'];
   FURNITURE_BASE[id] = bases.find(b => id === b || id.startsWith(b + '_')) || id;
 });
 

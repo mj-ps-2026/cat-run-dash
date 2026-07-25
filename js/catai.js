@@ -48,6 +48,20 @@ function getFurnitureSpots() {
   if (owned.includes('couch'))          { const p = fp('couch'); spots.push({ x: p.x, y: p.y, behavior: 'sitting', weight: 3 }, { x: p.x, y: p.y, behavior: 'sleeping', weight: 2 }); }
   if (owned.includes('couch_blue'))     { const p = fp('couch_blue'); spots.push({ x: p.x, y: p.y, behavior: 'sitting', weight: 3 }, { x: p.x, y: p.y, behavior: 'sleeping', weight: 2 }); }
   if (owned.includes('cat_tunnel'))     { const p = fp('cat_tunnel'); spots.push({ x: p.x, y: Math.min(p.y + 8, H * 0.63), behavior: 'tunneling', weight: 3 }); }
+  // New furniture items
+  if (owned.includes('cat_sofa'))        { const p = fp('cat_sofa'); spots.push({ x: p.x, y: p.y, behavior: 'sitting', weight: 3 }, { x: p.x, y: p.y, behavior: 'sleeping', weight: 2 }); }
+  if (owned.includes('window_perch'))    { const p = fp('window_perch'); spots.push({ x: p.x, y: p.y, behavior: 'watching', weight: 3 }, { x: p.x, y: p.y, behavior: 'sitting', weight: 1 }); }
+  if (owned.includes('cat_gym'))         { const p = fp('cat_gym'); spots.push({ x: p.x, y: py20('cat_gym'), behavior: 'playing', weight: 3 }, { x: p.x, y: py20('cat_gym'), behavior: 'scratching', weight: 2 }, { x: p.x, y: p.y + 10, behavior: 'sitting', weight: 1 }); }
+  if (owned.includes('scratching_mat'))  { const p = fp('scratching_mat'); spots.push({ x: p.x, y: py20('scratching_mat'), behavior: 'scratching', weight: 3 }); }
+  if (owned.includes('teepee'))          { const p = fp('teepee'); spots.push({ x: p.x, y: p.y + 5, behavior: 'sleeping', weight: 3 }, { x: p.x, y: p.y + 5, behavior: 'tunneling', weight: 2 }); }
+  if (owned.includes('cat_wheel'))       { const p = fp('cat_wheel'); spots.push({ x: p.x, y: py20('cat_wheel'), behavior: 'playing', weight: 3 }); }
+  if (owned.includes('treat_dispenser')) { const p = fp('treat_dispenser'); spots.push({ x: p.x, y: py20('treat_dispenser'), behavior: 'eating', weight: 3 }, { x: p.x, y: py20('treat_dispenser'), behavior: 'playing', weight: 1 }); }
+  if (owned.includes('food_mat'))        { const p = fp('food_mat'); spots.push({ x: p.x, y: py20('food_mat'), behavior: 'eating', weight: 2 }); }
+  if (owned.includes('cat_tree_house'))  { const p = fp('cat_tree_house'); spots.push({ x: p.x, y: p.y + 30, behavior: 'sleeping', weight: 3 }, { x: p.x, y: p.y + 30, behavior: 'sitting', weight: 2 }, { x: p.x, y: p.y + 30, behavior: 'playing', weight: 1 }); }
+  if (owned.includes('wall_shelves'))    { const p = fp('wall_shelves'); spots.push({ x: p.x, y: p.y, behavior: 'watching', weight: 3 }, { x: p.x, y: p.y, behavior: 'looking', weight: 2 }); }
+  if (owned.includes('cat_bridge'))      { const p = fp('cat_bridge'); spots.push({ x: p.x, y: p.y, behavior: 'playing', weight: 3 }, { x: p.x, y: p.y, behavior: 'looking', weight: 2 }); }
+  if (owned.includes('heated_bed'))      { const p = fp('heated_bed'); spots.push({ x: p.x, y: p.y, behavior: 'sleeping', weight: 3 }); }
+  if (owned.includes('couch_pillow'))    { const p = fp('couch_pillow'); spots.push({ x: p.x, y: p.y, behavior: 'sleeping', weight: 3 }, { x: p.x, y: p.y, behavior: 'sitting', weight: 2 }); }
   // Toys on the floor — positions are dynamic
   game.ownedToys.forEach((toyId, i) => {
     const tp = getToyXY(i);
@@ -108,6 +122,19 @@ function getFurnitureHitboxes() {
     { id: 'cat_tunnel',  w: 108, h: 48, offy: 0, behavior: 'playing', label: 'Tunnel' },
     { id: 'floor_lamp_brass', w: 36, h: 110, offy: -35, behavior: 'looking', label: 'Floor Lamp', toggleLamp: true },
     { id: 'floor_lamp_modern', w: 34, h: 108, offy: -34, behavior: 'looking', label: 'Floor Lamp', toggleLamp: true },
+    { id: 'cat_sofa', w: 80, h: 35, offy: -5, behavior: 'sitting', label: 'Cat Sofa' },
+    { id: 'window_perch', w: 70, h: 30, offy: -10, behavior: 'watching', label: 'Window Perch' },
+    { id: 'cat_gym', w: 50, h: 110, offy: -20, behavior: 'playing', label: 'Cat Gym' },
+    { id: 'scratching_mat', w: 60, h: 20, offy: 5, behavior: 'scratching', label: 'Scratch Mat' },
+    { id: 'teepee', w: 60, h: 50, offy: -15, behavior: 'sleeping', label: 'Teepee' },
+    { id: 'cat_wheel', w: 70, h: 40, offy: 0, behavior: 'playing', label: 'Cat Wheel' },
+    { id: 'treat_dispenser', w: 30, h: 30, offy: -5, behavior: 'eating', label: 'Treat Dispenser' },
+    { id: 'food_mat', w: 60, h: 15, offy: 5, behavior: 'eating', label: 'Food Mat' },
+    { id: 'cat_tree_house', w: 65, h: 130, offy: -30, behavior: 'sleeping', label: 'Tree House' },
+    { id: 'wall_shelves', w: 90, h: 30, offy: -50, behavior: 'watching', label: 'Wall Shelves' },
+    { id: 'cat_bridge', w: 70, h: 20, offy: -55, behavior: 'sitting', label: 'Cat Bridge' },
+    { id: 'heated_bed', w: 60, h: 25, offy: 0, behavior: 'sleeping', label: 'Heated Bed' },
+    { id: 'couch_pillow', w: 30, h: 20, offy: -5, behavior: 'sitting', label: 'Couch Pillow' },
   ];
 
   defs.forEach(d => {
@@ -127,7 +154,7 @@ function getFurnitureHitboxes() {
   });
 
   // Toy hitboxes
-  const toyNames = { yarn: 'Yarn Ball', bell: 'Jingle Bell', mousetoy: 'Mouse Toy', fish_toy: 'Fish Toy', featherwand: 'Feather Wand', butterfly: 'Butterfly', laser: 'Laser', rc_car: 'RC Car' };
+  const toyNames = { yarn: 'Yarn Ball', bell: 'Jingle Bell', mousetoy: 'Mouse Toy', fish_toy: 'Fish Toy', featherwand: 'Feather Wand', butterfly: 'Butterfly', laser: 'Laser', rc_car: 'RC Car', crinkle_ball: 'Crinkle Ball', bouncy_ball: 'Bouncy Ball', catnip_mouse: 'Catnip Mouse', cat_dancer: 'Cat Dancer', treat_puzzle: 'Treat Puzzle', tunnel_tube: 'Tunnel Tube', automouse: 'Auto Mouse' };
   toys.forEach((toyId, i) => {
     const tp = getToyXY(i);
     boxes.push({ x: tp.x - 15, y: tp.y - 15, w: 30, h: 30, behavior: 'playing', targetX: tp.x, targetY: tp.y - 10, label: toyNames[toyId] || 'Toy', dragId: `toy_${i}` });
@@ -154,7 +181,7 @@ function isCatSad() {
   return getPawMood() < 0.2;
 }
 
-const SLEEP_SPOT_IDS = ['catbed', 'catbed_blue', 'catbed_green', 'blanket', 'blanket_blue', 'blanket_pink', 'hammock', 'hammock_green', 'couch', 'couch_blue'];
+const SLEEP_SPOT_IDS = ['catbed', 'catbed_blue', 'catbed_green', 'blanket', 'blanket_blue', 'blanket_pink', 'hammock', 'hammock_green', 'couch', 'couch_blue', 'teepee', 'heated_bed', 'cat_tree_house', 'cat_sofa', 'couch_pillow'];
 
 function getRandomSleepSpot() {
   const available = game.furniture.filter(id => SLEEP_SPOT_IDS.includes(id));
@@ -224,7 +251,8 @@ function updateCatAI(dt) {
     const dx = ai.targetX - ai.x;
     const dy = ai.targetY - ai.y;
     const dist = Math.hypot(dx, dy);
-    if (dist < 5) {
+    const chasing = game.laserActive || (game.thrownToy && !game.thrownToy.settled) || game.throwGrab;
+    if (dist < 5 && !chasing) {
       // Arrived — start the queued behavior
       ai.x = ai.targetX;
       ai.y = ai.targetY;
@@ -240,8 +268,15 @@ function updateCatAI(dt) {
       // Maybe emote on arrival
       maybeEmote(ai);
     } else {
-      const chasing = game.laserActive || (game.thrownToy && !game.thrownToy.settled) || game.throwGrab;
-      const speed = (chasing ? 280 : 60) * STAGE_SCALE[currentStage];
+      const mood = getPawMood();
+      let speed;
+      if (mood >= 0.5) {
+        speed = (chasing ? 550 : 110) * STAGE_SCALE[currentStage];
+      } else if (mood >= 0.2) {
+        speed = (chasing ? 280 : 60) * STAGE_SCALE[currentStage];
+      } else {
+        speed = 35 * STAGE_SCALE[currentStage];
+      }
       ai.x += (dx / dist) * speed * dt;
       ai.y += (dy / dist) * speed * dt;
       ai.facing = dx > 0 ? 1 : -1;

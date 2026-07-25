@@ -193,12 +193,15 @@ function updateBackyard(dt) {
   const attackClick = mouse.clicked && attackBtnHit;
   if (b.attackCooldown <= 0 && (attackKeys || attackClick)) {
     let hitAny = false;
+    let hitPct = 0;
     b.critters.forEach(c => {
       if (c.caught || c.dead) return;
       const d = Math.hypot(c.x - b.px, c.y - b.py);
       if (d < BY_SCRATCH_RANGE) {
         hitAny = true;
         c.hp--;
+        const pct = Math.round((1 / c.maxHp) * 100);
+        hitPct = Math.max(hitPct, pct);
         const nx = d < 1e-3 ? 1 : (c.x - b.px) / d;
         const ny = d < 1e-3 ? 0 : (c.y - b.py) / d;
         c.x += nx * 40;
@@ -212,6 +215,8 @@ function updateBackyard(dt) {
           sfxComplete();
           spawnParticles(b.particles, c.x, c.y, 20, '#ffcc44', 90);
           addFloat(c.x, c.y - 36, `${c.kind.charAt(0).toUpperCase() + c.kind.slice(1)} down! Eat it!`, '#fa0');
+        } else {
+          addFloat(c.x, c.y - 36, `${pct}%`, '#f44');
         }
       }
     });
@@ -219,7 +224,7 @@ function updateBackyard(dt) {
     b.attackCooldown = BY_SCRATCH_COOLDOWN;
     b.attackFlash = 0.26;
     sfxScrape();
-    addFloat(b.px, b.py - 38, hitAny ? '⚔️ Hit!' : '⚔️ Swing!', hitAny ? '#f44' : '#88a');
+    if (!hitAny) addFloat(b.px, b.py - 38, '⚔️ Swing!', '#88a');
   }
 
   if (mouse.clicked && !homeHit && !attackBtnHit) {

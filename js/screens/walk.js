@@ -81,6 +81,28 @@ function initWalk() {
   w.scratchCooldown = 0;
   w.scratchFlash = 0;
 
+  // Critters to chase (if you're lucky!)
+  w.critters = [];
+  const critterCount = stage === 0 ? 4 + Math.floor(Math.random() * 3) : 3 + Math.floor(Math.random() * 3);
+  const critterKinds = ['bird', 'bug', 'bunny', 'lizard'];
+  const critterSpawnW = w.maze ? w.mazeW * (w.cellSize || 60) : W;
+  const critterSpawnH = w.maze ? w.mazeH * (w.cellSize || 60) : H;
+  const critterOX = w.maze ? (w.mazeOX || 0) : 0;
+  const critterOY = w.maze ? (w.mazeOY || 0) : 0;
+  for (let ci = 0; ci < critterCount; ci++) {
+    const kind = critterKinds[Math.floor(Math.random() * critterKinds.length)];
+    w.critters.push({
+      x: critterOX + 30 + Math.random() * (critterSpawnW - 60),
+      y: critterOY + 30 + Math.random() * (critterSpawnH - 60),
+      kind,
+      hp: CRITTER_HP[kind],
+      maxHp: CRITTER_HP[kind],
+      caught: false,
+      vx: 0, vy: 0,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+
   // Scatter collectible items
   w.items = [];
   const itemCount = stage === 0 ? 12 : (w.mazeW * w.mazeH > 20 ? 10 : 8);
@@ -316,6 +338,47 @@ function updateWalk(dt) {
     w.companionY = Math.max(55, Math.min(H - 15, w.companionY));
   }
 
+  // Critter AI — flee from player
+  w.critters.forEach(c => {
+    if (c.caught) return;
+    c.phase += dt * 8;
+    const cdx = c.x - w.px;
+    const cdy = c.y - w.py;
+    const cDist = Math.hypot(cdx, cdy) || 1;
+    const fleeRange = c.kind === 'lizard' ? 200 : c.kind === 'bunny' ? 160 : 130;
+    const fleeStr = c.kind === 'lizard' ? 240 : c.kind === 'bunny' ? 200 : 180;
+    if (cDist < fleeRange) {
+      const flee = fleeStr * (1 - cDist / fleeRange);
+      c.vx += (cdx / cDist) * flee * dt;
+      c.vy += (cdy / cDist) * flee * dt;
+    }
+    const caps = { bird: 160, bug: 130, bunny: 150, lizard: 190 };
+    const cap = caps[c.kind] || 130;
+    const vm = Math.hypot(c.vx, c.vy);
+    if (vm > cap) { c.vx = (c.vx / vm) * cap; c.vy = (c.vy / vm) * cap; }
+    c.x += c.vx * dt;
+    c.y += c.vy * dt;
+    c.vx *= 0.97;
+    c.vy *= 0.97;
+    // Bounds
+    const minX = (w.maze ? (w.mazeOX || 0) : 0) + 10;
+    const maxX = (w.maze ? (w.mazeOX || 0) + (w.mazeW || 0) * (w.cellSize || W) : W) - 10;
+    const minY = (w.maze ? (w.mazeOY || 0) : 0) + 10;
+    const maxY = (w.maze ? (w.mazeOY || 0) + (w.mazeH || 0) * (w.cellSize || H) : H) - 10;
+    if (c.x < minX || c.x > maxX) c.vx *= -0.8;
+    if (c.y < minY || c.y > maxY) c.vy *= -0.8;
+    c.x = Math.max(minX, Math.min(maxX, c.x));
+    c.y = Math.max(minY, Math.min(maxY, c.y));
+    // Catch
+    if (Math.hypot(c.x - w.px, c.y - w.py) < 22) {
+      c.caught = true;
+      sfxGather();
+      const reward = c.kind === 'bunny' ? 3 : c.kind === 'lizard' ? 2 : 1;
+      game.money += reward;
+      addFloat(c.x, c.y - 30, `🐾 Caught ${c.kind}! +$${reward}`, '#f8d');
+    }
+  });
+
   // Check item collection
   w.items.forEach(item => {
     if (!item.collected) {
@@ -462,6 +525,13 @@ function drawWalk() {
     ctx.quadraticCurveTo(200, 350, 0, 400); ctx.closePath(); ctx.fill();
   }
 
+  // Draw critters
+  w.critters.forEach(c => {
+    if (c.caught) return;
+    const cFace = c.vx >= 0 ? 1 : -1;
+    drawCritterSprite(c.x, c.y, c.kind, c.phase, cFace);
+  });
+
   // Draw collectible items
   const itemIcons = ['🌸', '🪶', '🍃', '🐚'];
   w.items.forEach(item => {
@@ -573,7 +643,12 @@ function drawWalk() {
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
     const moveHint = touchCtrl.isTouch ? 'Hold & drag to move' : 'Hold click or Arrow keys to move';
-    ctx.fillText(`${moveHint}  |  Collect sparkly items!`, W / 2, H - 10);
+    const critterCount = w.critters.filter(c => !c.caught).length;
+    if (critterCount > 0) {
+      ctx.fillText(`${moveHint}  |  Collect sparkly items!  |  🌿 ${critterCount} critters nearby — chase them!`, W / 2, H - 10);
+    } else {
+      ctx.fillText(`${moveHint}  |  Collect sparkly items!`, W / 2, H - 10);
+    }
   }
 
   // Return button (not during caught animation)
