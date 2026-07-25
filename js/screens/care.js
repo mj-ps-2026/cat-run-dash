@@ -646,7 +646,7 @@ function drawCare(dt) {
       }
     }
 
-    // Drop scooper - if NOT on litterbox, return to dock
+    // Drop scooper - return to dock
     if (game.scoopDragging && !mouse.down) {
       const dropX = game.scoopDragging.x;
       const dropY = game.scoopDragging.y;
@@ -654,10 +654,7 @@ function drawCare(dt) {
       const onBox = dropX >= lx - 28 && dropX <= lx + 28 && dropY >= ly - 10 && dropY <= ly + 30;
       console.log('SCOOPER DROP:', { dropX, dropY, lx, ly, onBox, clumps: game.litterboxClumps, dirt: game.litterboxDirt });
 
-      if (!onBox) {
-        // Return scooper to dock
-        game.scoopDragging = null;
-      }
+      game.scoopDragging = null;
     }
 
     // Shaking while cleaning (track mouse position even after mouse release to show docked scooper)
@@ -705,7 +702,8 @@ function drawCare(dt) {
           }
         }
       }
-    } else if (game.litterCleaning && !mouse.down) {
+    }
+    if (game.litterCleaning && !mouse.down) {
       game.litterCleaning = null;
     }
   }
