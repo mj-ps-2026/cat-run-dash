@@ -9,8 +9,9 @@ function chaseScratchHit(mx, my) {
   return Math.hypot(mx - CHASE_SCRATCH_CX, my - CHASE_SCRATCH_CY) < CHASE_SCRATCH_HIT_R;
 }
 
-function initChase() {
+function initChase(destId) {
   const c = game.chase;
+  c.destId = destId || null;
   c.mapH = 3000; // Map height
   c.px = 400;
   c.py = c.mapH - 100; // Start at bottom
@@ -263,8 +264,9 @@ function drawChase() {
   const camY = c.cameraY;
 
   // Background - neighborhood
+  const skyColor = c.destId === 'dash' ? '#4a6a8a' : '#87CEEB';
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#87CEEB');
+  grad.addColorStop(0, skyColor);
   grad.addColorStop(1, '#6ab86a');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
@@ -295,6 +297,44 @@ function drawChase() {
 
   // Player's house at top
   drawPlayerHouse(W / 2, c.houseY - camY);
+
+  // Alley decorations for Dog Dash
+  if (c.destId === 'dash') {
+    ctx.fillStyle = 'rgba(60, 60, 60, 0.5)';
+    for (let i = 0; i < 12; i++) {
+      const dx = (i % 2 === 0 ? 15 : W - 35);
+      const dy = 200 + i * 220 - camY;
+      if (dy > -40 && dy < H + 40) {
+        ctx.fillRect(dx, dy, 20, 30);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(dx - 2, dy - 5, 24, 5);
+        ctx.fillStyle = 'rgba(60, 60, 60, 0.5)';
+      }
+    }
+    const graffitiColors = ['#f44', '#4af', '#fa0', '#f6a', '#4f4'];
+    for (let i = 0; i < 6; i++) {
+      const gx = 40 + (i % 2) * (W - 80);
+      const gy = 300 + i * 350 - camY;
+      if (gy > -30 && gy < H + 30) {
+        ctx.fillStyle = graffitiColors[i % graffitiColors.length];
+        ctx.globalAlpha = 0.3 + Math.sin(game.time + i) * 0.1;
+        ctx.font = '28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🐾', gx, gy);
+        ctx.globalAlpha = 1;
+      }
+    }
+    // "DASH" arrows on road
+    ctx.fillStyle = 'rgba(255, 200, 50, 0.25)';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 8; i++) {
+      const ay = 200 + i * 350 - camY;
+      if (ay > -30 && ay < H + 30) {
+        ctx.fillText('↑ DASH ↑', W / 2, ay);
+      }
+    }
+  }
 
   // Obstacles
   c.obstacles.forEach(obs => {

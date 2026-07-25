@@ -13,9 +13,9 @@ let game = {
   // Care animation
   careAnim: null, // { type, timer, x, y }
   // Walk state
-  walk: { px: 0, py: 0, items: [], distWalked: 0, gathered: 0, walkCounted: false, maze: [], dogs: [], caught: false, caughtTimer: 0, mazeW: 0, mazeH: 0, cellSize: 0, hits: 0, companion: null, companionX: 0, companionY: 0, choosingCompanion: false, scratchCooldown: 0, scratchFlash: 0 },
+  walk: { px: 0, py: 0, items: [], distWalked: 0, gathered: 0, walkCounted: false, maze: [], dogs: [], caught: false, caughtTimer: 0, mazeW: 0, mazeH: 0, cellSize: 0, hits: 0, companion: null, companionX: 0, companionY: 0, choosingCompanion: false, scratchCooldown: 0, scratchFlash: 0, destId: null, wanderCats: [] },
   // Chase state
-  chase: { px: 0, py: 0, vx: 0, vy: 0, dogs: [], scrapes: 0, timer: 300, dashCooldown: 0, dashing: false, dashTimer: 0, houseY: 0, mapH: 0, cameraY: 0, obstacles: [], particles: [], won: false, lost: false, invincible: 0, scratchCooldown: 0, scratchFlash: 0 },
+  chase: { px: 0, py: 0, vx: 0, vy: 0, dogs: [], scrapes: 0, timer: 300, dashCooldown: 0, dashing: false, dashTimer: 0, houseY: 0, mapH: 0, cameraY: 0, obstacles: [], particles: [], won: false, lost: false, invincible: 0, scratchCooldown: 0, scratchFlash: 0, destId: null },
   // Transition
   transition: null, // { from, to, timer }
   // Floating text
@@ -73,6 +73,7 @@ let game = {
     px: 400, py: 320, targetX: 400, targetY: 320,
     eggs: [], // { x, y, collected }
     eggHuntComplete: false,
+    destId: null,
   },
   eggHuntRewardClaimed: false, // one-time reward when all eggs found during event
   // Supporter mod pack (password unlock)
