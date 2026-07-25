@@ -2,10 +2,10 @@
 // Depends on: game state, walk/chase/backyard inits
 
 const TRAVEL_SPOTS = [
-  { id: 'park', name: 'Sunny Park', color: '#7a9a5a', blurb: 'Open walk — gather flowers', go: 'walk' },
-  { id: 'woods', name: 'Pine Trail', color: '#5a7a4a', blurb: 'Maze walk', go: 'walk' },
-  { id: 'dash', name: 'Dog Dash', color: '#c07050', blurb: 'Run the alley chase', go: 'chase' },
-  { id: 'yard', name: 'Backyard', color: '#90c878', blurb: 'Trees & critters', go: 'backyard' },
+  { id: 'park', name: 'Sunny Park', color: '#8ab84a', blurb: 'Bright & full of flowers — cats roam free', go: 'walk' },
+  { id: 'woods', name: 'Pine Trail', color: '#4a6a3a', blurb: 'Pine forest maze — watch for pinecones', go: 'walk' },
+  { id: 'dash', name: 'Dog Dash', color: '#b06050', blurb: 'Alley cat dash — dodge dogs, reach home!', go: 'chase' },
+  { id: 'yard', name: 'Backyard', color: '#80b868', blurb: 'Fenced yard with critters & a stray cat', go: 'backyard' },
 ];
 
 function updateTravel(dt) {
@@ -20,14 +20,15 @@ function updateTravel(dt) {
       tr.phase = 'map';
       tr.dest = null;
       tr.timer = 0;
+      const destId = dest ? dest.id : null;
       if (dest && dest.go === 'walk') {
-        initWalk();
+        initWalk(destId);
         game.screen = 'walk';
       } else if (dest && dest.go === 'chase') {
-        initChase();
+        initChase(destId);
         game.screen = 'chase';
       } else if (dest && dest.go === 'backyard') {
-        initBackyard();
+        initBackyard(destId);
         game.screen = 'backyard';
       } else {
         game.screen = 'care';

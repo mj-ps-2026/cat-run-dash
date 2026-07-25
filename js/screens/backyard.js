@@ -106,8 +106,9 @@ function drawCritterSprite(x, y, kind, t, face) {
   ctx.restore();
 }
 
-function initBackyard() {
+function initBackyard(destId) {
   const b = game.backyard;
+  b.destId = destId || null;
   b.px = W / 2;
   b.py = H * 0.48;
   b.targetX = b.px;
@@ -422,6 +423,53 @@ function drawBackyard() {
     ctx.fill();
   }
 
+  // Backyard fence
+  ctx.strokeStyle = '#8a7a5a';
+  ctx.lineWidth = 4;
+  for (let i = 0; i < 14; i++) {
+    const fx = i * (W / 14);
+    ctx.beginPath();
+    ctx.moveTo(fx, H - 25);
+    ctx.lineTo(fx + 4, H - 55);
+    ctx.lineTo(fx + 8, H - 25);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#7a6a4a';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, H - 35); ctx.lineTo(W, H - 35);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, H - 18); ctx.lineTo(W, H - 18);
+  ctx.stroke();
+
+  // Small dog house
+  ctx.fillStyle = '#c07050';
+  const dhx = W - 90, dhy = H - 70;
+  ctx.fillRect(dhx, dhy, 50, 40);
+  ctx.fillStyle = '#a06040';
+  ctx.beginPath();
+  ctx.moveTo(dhx - 5, dhy);
+  ctx.lineTo(dhx + 25, dhy - 30);
+  ctx.lineTo(dhx + 55, dhy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#3a3a3a';
+  drawEllipse(dhx + 25, dhy + 22, 10, 12);
+  ctx.fill();
+
+  // Bird bath
+  ctx.fillStyle = '#999';
+  ctx.fillRect(80, H - 95, 6, 50);
+  ctx.fillStyle = '#aaa';
+  ctx.beginPath();
+  ctx.ellipse(83, H - 97, 20, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#8af';
+  ctx.beginPath();
+  ctx.ellipse(83, H - 100, 16, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   const b = game.backyard;
   b.particles.forEach(p => {
     ctx.fillStyle = p.color;
@@ -496,7 +544,7 @@ function drawBackyard() {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'left';
-  let sub = 'A garden with flowers — attack critters to bring them down, then eat!';
+  let sub = '🏡 Backyard — Fenced yard with dog house & bird bath. Chase critters for feed!';
   if (typeof isEggHuntEventActive === 'function' && isEggHuntEventActive() && !game.eggHuntRewardClaimed && b.eggs.length > 0) {
     const left = b.eggs.filter(e => !e.collected).length;
     sub = `Egg hunt off-season in code — ${left} eggs if event returns.`;

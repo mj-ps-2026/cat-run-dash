@@ -5,8 +5,9 @@ const WALK_SCRATCH_BTN_X = 10, WALK_SCRATCH_BTN_Y = H - 50, WALK_SCRATCH_BTN_W =
 const WALK_SCRATCH_RANGE = 74;
 const WALK_SCRATCH_COOLDOWN = 1.45;
 
-function initWalk() {
+function initWalk(destId) {
   const w = game.walk;
+  w.destId = destId || null;
   const currentStage = getCurrentStage();
   w.distWalked = 0;
   w.gathered = 0;
@@ -136,6 +137,24 @@ function initWalk() {
         type: Math.floor(Math.random() * 4),
         collected: false,
         bob: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  // Wandering cats for Sunny Park
+  w.wanderCats = [];
+  if (w.destId === 'park') {
+    for (let i = 0; i < 3; i++) {
+      const stage = Math.floor(Math.random() * 2) + 1;
+      w.wanderCats.push({
+        x: 100 + Math.random() * 600,
+        y: 100 + Math.random() * 400,
+        targetX: 0, targetY: 0,
+        facing: Math.random() > 0.5 ? 1 : -1,
+        state: 'idle',
+        timer: 2 + Math.random() * 4,
+        breed: Math.floor(Math.random() * CAT_BREEDS.length),
+        stage: stage,
       });
     }
   }
@@ -406,6 +425,48 @@ function updateWalk(dt) {
       if (game.care.walk >= MAX_PER_ACTIVITY) setTimeout(() => sfxComplete(), 100);
     }
   }
+
+  // Wandering cats AI (Sunny Park)
+  w.wanderCats.forEach(cat => {
+    cat.timer -= dt;
+    if (cat.state === 'walking') {
+      const dx = cat.targetX - cat.x;
+      const dy = cat.targetY - cat.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 5) {
+        cat.x = cat.targetX; cat.y = cat.targetY;
+        cat.state = 'idle';
+        cat.timer = 3 + Math.random() * 5;
+      } else {
+        const spd = 35;
+        cat.x += (dx / dist) * spd * dt;
+        cat.y += (dy / dist) * spd * dt;
+        cat.facing = dx > 0 ? 1 : -1;
+      }
+    } else if (cat.timer <= 0) {
+      cat.targetX = 80 + Math.random() * (W - 160);
+      cat.targetY = 100 + Math.random() * (H - 200);
+      cat.state = 'walking';
+      cat.timer = 8 + Math.random() * 4;
+    }
+  });
+}
+
+function drawPineTree(x, y, size) {
+  const trunkH = size * 0.35;
+  ctx.fillStyle = '#5a4030';
+  ctx.fillRect(x - size * 0.06, y - trunkH, size * 0.12, trunkH);
+  for (let i = 0; i < 3; i++) {
+    const ly = y - trunkH - i * size * 0.2;
+    const lw = size * (0.35 - i * 0.08);
+    ctx.fillStyle = ['#1a4a1a', '#2a5a2a', '#3a6a3a'][i];
+    ctx.beginPath();
+    ctx.moveTo(x, ly - size * 0.22);
+    ctx.lineTo(x - lw, ly);
+    ctx.lineTo(x + lw, ly);
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 function drawWalk() {
@@ -463,26 +524,55 @@ function drawWalk() {
 
   drawGrassBg();
 
+  // Location-specific background decorations
+  if (w.destId === 'park') {
+    ctx.fillStyle = 'rgba(255, 255, 200, 0.12)';
+    ctx.fillRect(0, 0, W, H);
+    const grad = ctx.createRadialGradient(650, 60, 10, 650, 60, 120);
+    grad.addColorStop(0, 'rgba(255, 255, 200, 0.4)');
+    grad.addColorStop(1, 'rgba(255, 255, 200, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(500, 0, 300, 200);
+    const parkFlowerColors = ['#ff6b8a', '#ffb347', '#ff69b4', '#dda0dd', '#ffd700', '#ff4081', '#ff8c69', '#ff7f50'];
+    for (let i = 0; i < 40; i++) {
+      const fx = (i * 79 + 31) % (W - 10) + 5;
+      const fy = (i * 57 + 23) % (H - 10) + 5;
+      const fc = parkFlowerColors[i % parkFlowerColors.length];
+      ctx.fillStyle = fc;
+      drawEllipse(fx, fy, 3 + (i % 3), 2 + (i % 2));
+      ctx.fill();
+      ctx.fillStyle = '#ffeb3b';
+      drawEllipse(fx, fy, 1.2, 1);
+      ctx.fill();
+    }
+  }
+
   if (w.maze) {
     // Draw maze
     const ox = w.mazeOX, oy = w.mazeOY, cs = w.cellSize;
 
     // Maze floor
-    ctx.fillStyle = '#d4b896';
+    ctx.fillStyle = w.destId === 'woods' ? '#8a7a5a' : '#d4b896';
     ctx.fillRect(ox, oy, w.mazeW * cs, w.mazeH * cs);
 
-    // Cell floors (subtle checker)
+    // Cell floors (subtle checker / pine needles)
     for (let r = 0; r < w.mazeH; r++) {
       for (let c = 0; c < w.mazeW; c++) {
         if ((r + c) % 2 === 0) {
-          ctx.fillStyle = 'rgba(0,0,0,0.03)';
+          ctx.fillStyle = w.destId === 'woods' ? 'rgba(30,20,10,0.07)' : 'rgba(0,0,0,0.03)';
           ctx.fillRect(ox + c * cs, oy + r * cs, cs, cs);
+        }
+        if (w.destId === 'woods' && (r * w.mazeW + c) % 5 === 0) {
+          ctx.fillStyle = 'rgba(60,50,30,0.1)';
+          ctx.beginPath();
+          ctx.ellipse(ox + c * cs + cs * 0.3 + Math.random() * cs * 0.4, oy + r * cs + cs * 0.7, 2, 4, 0.5, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
     }
 
     // Maze walls
-    ctx.strokeStyle = '#6a4a2a';
+    ctx.strokeStyle = w.destId === 'woods' ? '#4a3a2a' : '#6a4a2a';
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     w.walls.forEach(wall => {
@@ -492,8 +582,8 @@ function drawWalk() {
       ctx.stroke();
     });
 
-    // Hedge tops on walls (decorative)
-    ctx.strokeStyle = '#4a7a3a';
+    // Hedge / pine tops on walls
+    ctx.strokeStyle = w.destId === 'woods' ? '#2a5a2a' : '#4a7a3a';
     ctx.lineWidth = 6;
     ctx.globalAlpha = 0.5;
     w.walls.forEach(wall => {
@@ -503,6 +593,21 @@ function drawWalk() {
       ctx.stroke();
     });
     ctx.globalAlpha = 1;
+
+    // Pine trees around maze for Pine Trail
+    if (w.destId === 'woods') {
+      for (let i = 0; i < 10; i++) {
+        const side = i % 4;
+        let tx, ty;
+        const tSize = 22 + (i % 3) * 10;
+        if (side === 0) { tx = ox - 20; ty = oy + 20 + i * (w.mazeH * cs - 40) / 3; }
+        else if (side === 1) { tx = ox + w.mazeW * cs + 20; ty = oy + 20 + (i - 1) * (w.mazeH * cs - 40) / 2; }
+        else if (side === 2) { tx = ox + 30 + (i - 2) * (w.mazeW * cs - 60) / 3; ty = oy - 22; }
+        else { tx = ox + 30 + (i - 3) * (w.mazeW * cs - 60) / 2; ty = oy + w.mazeH * cs + 22; }
+        if (tx > ox && tx < ox + w.mazeW * cs && ty > oy && ty < oy + w.mazeH * cs) continue;
+        drawPineTree(tx, ty, tSize);
+      }
+    }
   } else {
     // Baby: open park with path and trees
     ctx.fillStyle = '#5a5';
@@ -523,6 +628,24 @@ function drawWalk() {
     ctx.quadraticCurveTo(600, 380, 800, 320);
     ctx.lineTo(800, 380); ctx.quadraticCurveTo(600, 430, 400, 390);
     ctx.quadraticCurveTo(200, 350, 0, 400); ctx.closePath(); ctx.fill();
+
+    // Extra flowers for Sunny Park
+    if (w.destId === 'park') {
+      const sfColors = ['#ff6b8a', '#ffb347', '#ff69b4', '#dda0dd', '#ffd700', '#ff4081'];
+      for (let i = 0; i < 25; i++) {
+        const fx = (i * 67 + 41) % (W - 20) + 10;
+        const fy = (i * 53 + 19) % (H - 40) + 20;
+        const pathY = 320 + Math.sin(fx * 0.008) * 40;
+        if (Math.abs(fy - pathY) < 25) continue;
+        const fc = sfColors[i % sfColors.length];
+        ctx.fillStyle = fc;
+        drawEllipse(fx, fy, 4 + (i % 3), 3 + (i % 2));
+        ctx.fill();
+        ctx.fillStyle = '#ffeb3b';
+        drawEllipse(fx, fy, 1.5, 1.2);
+        ctx.fill();
+      }
+    }
   }
 
   // Draw critters
@@ -533,7 +656,7 @@ function drawWalk() {
   });
 
   // Draw collectible items
-  const itemIcons = ['🌸', '🪶', '🍃', '🐚'];
+  const itemIcons = w.destId === 'woods' ? ['🌲', '🍂', '🪵', '🌰'] : ['🌸', '🪶', '🍃', '🐚'];
   w.items.forEach(item => {
     if (!item.collected) {
       const bob = Math.sin(item.bob) * 2.5;
@@ -558,6 +681,14 @@ function drawWalk() {
     drawCat(w.companionX, w.companionY, w.companion.breed, 3, cFacing, game.time, true, false, w.companion.equipped, w.companion.look);
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(w.companion.name || CAT_BREEDS[w.companion.breed].name, w.companionX, w.companionY + 25);
+  }
+
+  // Draw wandering cats (Sunny Park)
+  if (w.destId === 'park' && w.wanderCats) {
+    w.wanderCats.forEach(cat => {
+      const catMoving = cat.state === 'walking';
+      drawCat(cat.x, cat.y, cat.breed, cat.stage, cat.facing, game.time, catMoving, false);
+    });
   }
 
   // Draw player cat
@@ -597,8 +728,16 @@ function drawWalk() {
   }
 
   // HUD
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  drawRoundRect(10, 10, 260, 40, 8);
+  if (w.destId === 'park' && !w.maze) {
+    ctx.fillStyle = 'rgba(255, 200, 50, 0.45)';
+    drawRoundRect(10, 10, 320, 40, 8);
+  } else if (w.destId === 'woods') {
+    ctx.fillStyle = 'rgba(30, 50, 20, 0.55)';
+    drawRoundRect(10, 10, 320, 40, 8);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    drawRoundRect(10, 10, 260, 40, 8);
+  }
   ctx.fill();
   ctx.fillStyle = '#fff';
   ctx.font = '14px sans-serif';
@@ -619,10 +758,11 @@ function drawWalk() {
   // Stage difficulty label
   if (w.maze) {
     const diffLabels = ['', 'Easy Maze', 'Medium Maze', 'Hard Maze'];
+    const locLabel = w.destId === 'woods' ? '🌲 Pine Trail' : '';
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${diffLabels[currentStage]}  |  🐕 ${w.dogs.length} dog${w.dogs.length !== 1 ? 's' : ''}`, W / 2, 25);
+    ctx.fillText(`${locLabel} ${diffLabels[currentStage]}  |  🐕 ${w.dogs.length} dog${w.dogs.length !== 1 ? 's' : ''}`, W / 2, 25);
   }
 
   // Scratch button (when dogs are present)
@@ -644,7 +784,12 @@ function drawWalk() {
     ctx.textAlign = 'center';
     const moveHint = touchCtrl.isTouch ? 'Hold & drag to move' : 'Hold click or Arrow keys to move';
     const critterCount = w.critters.filter(c => !c.caught).length;
-    if (critterCount > 0) {
+    if (w.destId === 'park') {
+      const catCount = w.wanderCats ? w.wanderCats.length : 0;
+      ctx.fillText(`☀️ Sunny Park — Flowers bloom, cats roam!  ${moveHint}  |  🌿 ${critterCount} critters`, W / 2, H - 10);
+    } else if (w.destId === 'woods') {
+      ctx.fillText(`🌲 Pine Trail — Watch for pinecones underfoot!  ${moveHint}  |  🌿 ${critterCount} critters`, W / 2, H - 10);
+    } else if (critterCount > 0) {
       ctx.fillText(`${moveHint}  |  Collect sparkly items!  |  🌿 ${critterCount} critters nearby — chase them!`, W / 2, H - 10);
     } else {
       ctx.fillText(`${moveHint}  |  Collect sparkly items!`, W / 2, H - 10);
