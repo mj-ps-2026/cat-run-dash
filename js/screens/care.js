@@ -351,19 +351,19 @@ function drawCare(dt) {
   // Thrown toy in flight (world space)
   if (game.thrownToy && !game.thrownToy.settled) {
     const tt = game.thrownToy;
-    const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠' };
-    ctx.save();
-    ctx.translate(tt.x, tt.y);
-    ctx.rotate(game.time * 12);
-    ctx.font = '20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(toyIcons[tt.id] || '⚾', 0, 6);
-    ctx.restore();
-    ctx.globalAlpha = 0.3;
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.03, tt.y - tt.vy * 0.03 + 4);
-    ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.06, tt.y - tt.vy * 0.06 + 4);
+      const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠', crinkle_ball: '⚾', bouncy_ball: '🟡', catnip_mouse: '🐁' };
+      ctx.save();
+      ctx.translate(tt.x, tt.y);
+      ctx.rotate(game.time * 12);
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(toyIcons[tt.id] || '⚾', 0, 6);
+      ctx.restore();
+      ctx.globalAlpha = 0.3;
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.03, tt.y - tt.vy * 0.03 + 4);
+      ctx.fillText(toyIcons[tt.id] || '⚾', tt.x - tt.vx * 0.06, tt.y - tt.vy * 0.06 + 4);
     ctx.globalAlpha = 1;
   }
 
@@ -371,7 +371,7 @@ function drawCare(dt) {
   if (game.throwGrab) {
     const tg = game.throwGrab;
     const toyId = game.ownedToys[tg.toyIdx];
-    const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠' };
+    const toyIcons = { yarn: '🧶', bell: '🔔', mousetoy: '🐭', fish_toy: '🐠', crinkle_ball: '⚾', bouncy_ball: '🟡', catnip_mouse: '🐁' };
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 2;
     ctx.setLineDash([4, 4]);
@@ -753,7 +753,7 @@ function drawCare(dt) {
     }
 
     // Start drag on mousedown — special toys: laser, throwables
-    const THROWABLE_TOYS = ['yarn', 'bell', 'mousetoy', 'fish_toy'];
+    const THROWABLE_TOYS = ['yarn', 'bell', 'mousetoy', 'fish_toy', 'crinkle_ball', 'bouncy_ball', 'catnip_mouse'];
     if (mouse.down && !game.dragging && !game.laserActive && !game.throwGrab && !game.careMode && !game.scoopDragging && !game.litterCleaning) {
       const boxes = getFurnitureHitboxes();
       for (const box of boxes) {
