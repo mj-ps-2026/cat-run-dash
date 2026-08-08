@@ -53,9 +53,20 @@ function updateCare(dt) {
     if (keys['ArrowLeft']) game.homeScrollX = Math.max(0, (game.homeScrollX || 0) - 280 * dt);
     if (keys['ArrowRight']) game.homeScrollX = Math.min(maxS, (game.homeScrollX || 0) + 280 * dt);
     // Mouse: drag sky/wall to pan (same as touch)
-    if (mouse.down && !touchCtrl.isTouch) {
+    if (mouse.down && !touchCtrl.isTouch && !game.dragging) {
       const topUI = hitBox(mouse.x, mouse.y, 0, 0, 290, 155) || hitBox(mouse.x, mouse.y, W - 130, 0, 120, 45);
+      // Don't steal drags: skip pan when pressing on furniture (lets wall items be dragged)
+      let overFurniture = false;
       if (mouse.y < H * 0.30 && !topUI) {
+        const hbx = mouse.x + (game.homeScrollX || 0);
+        for (const b of getFurnitureHitboxes()) {
+          if (hbx >= b.x && hbx <= b.x + b.w && mouse.y >= b.y && mouse.y <= b.y + b.h) {
+            overFurniture = true;
+            break;
+          }
+        }
+      }
+      if (mouse.y < H * 0.30 && !topUI && !overFurniture) {
         if (game._carePanLastX !== undefined) {
           game.homeScrollX = Math.max(0, Math.min(maxS, (game.homeScrollX || 0) - (mouse.x - game._carePanLastX) * 1.15));
         }
@@ -172,6 +183,7 @@ function updateCare(dt) {
           if (game.care.brush >= MAX_PER_ACTIVITY) {
             setTimeout(() => sfxComplete(), 200);
             addFloat(680, 230, 'Brush Complete!', '#4a2', { screen: true });
+            game.careMode = null;
           }
           checkGrowth();
         }

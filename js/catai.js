@@ -131,8 +131,8 @@ function getFurnitureHitboxes() {
     { id: 'treat_dispenser', w: 30, h: 30, offy: -5, behavior: 'eating', label: 'Treat Dispenser' },
     { id: 'food_mat', w: 60, h: 15, offy: 5, behavior: 'eating', label: 'Food Mat' },
     { id: 'cat_tree_house', w: 65, h: 130, offy: -30, behavior: 'sleeping', label: 'Tree House' },
-    { id: 'wall_shelves', w: 90, h: 30, offy: -50, behavior: 'watching', label: 'Wall Shelves' },
-    { id: 'cat_bridge', w: 70, h: 20, offy: -55, behavior: 'sitting', label: 'Cat Bridge' },
+    { id: 'wall_shelves', w: 90, h: 90, offy: 40, behavior: 'watching', label: 'Wall Shelves' },
+    { id: 'cat_bridge', w: 70, h: 24, offy: 0, behavior: 'sitting', label: 'Cat Bridge' },
     { id: 'heated_bed', w: 60, h: 25, offy: 0, behavior: 'sleeping', label: 'Heated Bed' },
     { id: 'couch_pillow', w: 30, h: 20, offy: -5, behavior: 'sitting', label: 'Couch Pillow' },
   ];
