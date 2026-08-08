@@ -141,6 +141,60 @@ function updateCare(dt) {
     game.laserActive = false;
   }
 
+  // Brush the cat — hold & move back and forth over the cat (mouse interaction)
+  if (game.screen === 'care' && game.careMode === 'brush') {
+    const ai = game.catAI;
+    const hsx = game.homeScrollX || 0;
+    const wx = mouse.x + hsx;
+    const distToCat = Math.hypot(wx - ai.x, mouse.y - ai.y);
+
+    if (mouse.down && !game.isNight && ai.state !== 'sleeping' && distToCat < 70) {
+      if (!game.brushGrab) {
+        game.brushGrab = { power: 0, lastX: wx, lastY: mouse.y };
+        ai.state = 'grooming';
+        ai.stateTimer = 99;
+        ai.nextStateTimer = 99;
+        ai._queuedBehavior = 'grooming';
+      }
+      // Accumulate brush power from back-and-forth movement
+      game.brushGrab.power += Math.abs(wx - game.brushGrab.lastX) + Math.abs(mouse.y - game.brushGrab.lastY);
+      game.brushGrab.lastX = wx;
+      game.brushGrab.lastY = mouse.y;
+
+      // Every ~120px of brushing, award a brush credit
+      if (game.brushGrab.power >= 120) {
+        game.brushGrab.power = 0;
+        if (game.care.brush < MAX_PER_ACTIVITY) {
+          game.care.brush = Math.min(MAX_PER_ACTIVITY, game.care.brush + 1);
+          const gained = 1;
+          game.careAnim = { type: 'brush', timer: 1.5, icon: '🖌️' };
+          addFloat(ai.x, ai.y - 80, `+${gained} Brush!`, '#b8f');
+          if (game.care.brush >= MAX_PER_ACTIVITY) {
+            setTimeout(() => sfxComplete(), 200);
+            addFloat(680, 230, 'Brush Complete!', '#4a2', { screen: true });
+          }
+          checkGrowth();
+        }
+      }
+    } else if (!mouse.down && game.brushGrab) {
+      // Released — stop brushing
+      game.brushGrab = null;
+      if (ai.state === 'grooming') {
+        ai._queuedBehavior = 'idle';
+        ai.state = 'idle';
+        ai.stateTimer = 2;
+        ai.nextStateTimer = 2;
+      }
+    } else if (mouse.down && game.brushGrab && (distToCat >= 70 || game.isNight || ai.state === 'sleeping')) {
+      // Mouse moved off the cat — end brush session
+      game.brushGrab = null;
+      ai._queuedBehavior = 'idle';
+      ai.state = 'idle';
+      ai.stateTimer = 2;
+      ai.nextStateTimer = 2;
+    }
+  }
+
   // Thrown toy physics
   if (game.thrownToy) {
     const tt = game.thrownToy;
@@ -550,9 +604,9 @@ function drawCare(dt) {
           addFloat(catX, catY - 60, 'Cat is sleeping! 😴', '#b8f');
         } else {
           game.careMode = 'brush';
-          game.careHintText = 'Brush: tap your cat';
+          game.careHintText = 'Brush: hold & move over your cat';
           game.careHintUntil = game.time + 5;
-          addFloat(catX, catY - 60, 'Click on your cat to brush!', '#b8f');
+          addFloat(catX, catY - 60, 'Hold & move over your cat to brush!', '#b8f');
         }
       } else if (act === 'play') {
         sfxClick();
@@ -886,20 +940,7 @@ function drawCare(dt) {
             sfxClick();
             game.careMode = null;
           } else if (game.careMode === 'brush') {
-            const distToCat = Math.hypot(wx - ai.x, my - ai.y);
-            if (distToCat < 55) {
-              ai.state = 'grooming';
-              ai._pendingCredit = 'brush';
-              ai._pendingCreditAmount = 1;
-              const dur = BEHAVIOR_DURATION['grooming'];
-              ai.stateTimer = dur[0] + Math.random() * (dur[1] - dur[0]);
-              ai.nextStateTimer = ai.stateTimer;
-              addFloat(ai.x, ai.y - 40, '✨ Brushing!', '#b8f');
-              sfxClick();
-              game.careMode = null;
-            } else {
-              addFloat(wx, my - 20, 'Click directly on your cat!', '#b8f');
-            }
+            addFloat(wx, my - 20, 'Hold & move over your cat to brush!', '#b8f');
           } else if (game.careMode === 'play') {
             ai.targetX = Math.max(50, Math.min(HOME_TOTAL_W - 160, wx));
             ai.targetY = Math.max(250, Math.min(H * 0.63, my));
@@ -1060,7 +1101,7 @@ function drawCare(dt) {
   // Care mode cursor icon
   if (game.careMode) {
     const modeIcons = { feed: '🍖', brush: '🖌️', play: '🧶' };
-    const modeHints = { feed: 'Click floor to place food', brush: 'Click on cat to brush', play: 'Click to play with cat' };
+    const modeHints = { feed: 'Click floor to place food', brush: 'Hold & move on cat to brush', play: 'Click to play with cat' };
     const icon = modeIcons[game.careMode];
     const hint = modeHints[game.careMode];
     ctx.font = '24px sans-serif';

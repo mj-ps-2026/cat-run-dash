@@ -58,6 +58,7 @@ let game = {
   thrownToy: null,       // { id, x, y, vx, vy, toyIdx, settled } or null
   throwGrab: null,        // { toyIdx, startX, startY } while holding before throw
   careMode: null,         // active care interaction mode: 'feed'|'brush'|'play'|null
+  brushGrab: null,        // { power, lastX, lastY } while brushing (hold & move over cat)
   placedFood: null,       // { x, y, inBowl } food placed on floor waiting for cat
   floorPoops: [],         // { x, y, id } messes to click-clean (no litter box or missed)
   litterboxDirt: 0,       // 0–1 fills slowly when cat uses litter box
